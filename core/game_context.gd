@@ -16,6 +16,7 @@ var economy: GoldEconomy
 var rooms: DungeonRooms
 var beds: DungeonBeds
 var food: FoodEconomy
+var keeper: KeeperState
 var last_marked_cell := Vector2i(-1, -1)
 var excavation_marks: Dictionary[Vector2i, bool] = {}
 var hovered_cell := Vector2i(-1, -1)
@@ -30,6 +31,7 @@ func _init(dungeon_grid: DungeonGrid = null, content_registry: ContentRegistry =
 		rooms = DungeonRooms.new(grid, registry, economy)
 		beds = DungeonBeds.new(grid, rooms, registry)
 		food = FoodEconomy.new(grid, rooms, registry)
+		keeper = KeeperState.new(self)
 		grid.tile_changed.connect(_on_terrain_changed)
 
 

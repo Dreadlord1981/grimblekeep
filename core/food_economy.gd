@@ -266,7 +266,7 @@ func prune(actors: Array[CreatureState]) -> void:
 
 
 func _eater_definition(actor: CreatureState) -> CreatureDefinition:
-	if actor == null or actor.id <= 0 or _registry == null:
+	if actor == null or actor.is_held or actor.id <= 0 or _registry == null:
 		return null
 	var definition := _registry.get_creature(actor.definition_id)
 	return definition if definition != null and &"eat" in definition.capabilities else null

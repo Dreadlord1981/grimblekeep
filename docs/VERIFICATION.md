@@ -2,11 +2,190 @@
 
 Foundation, workers, Treasury Build/Sell and the first Grubbin/Lair rest loop are
 verified locally with independent review. M3B adds verified Pig Pen production,
-growth, roaming and eating, plus a 3,000-gold playtest start. Mood/wages, a second species,
-keeper pickup/drop, leveling and saving remain pending. Earlier sections below
+growth, roaming and eating, plus a 3,000-gold playtest start. M3C keeper pickup/drop
+and creature inspection are verified below. Mood/wages, a second species,
+leveling and saving remain pending. Earlier sections below
 the current checkpoint retain their historical counts and scope.
 
-## Pig Pen food loop and funded playtest start — current verification
+## Unlimited mixed keeper queue — current verification
+
+`tools/dev.ps1 check`: **101 scripts, zero failures**. Full
+`tools/dev.ps1 test`: **2,010 checks, zero failures**, independently executed by
+the lead. Updated suites: keeper input 104, UI 40, gold 27; new primary queue 21
+and independent queue 32. All existing rule/integration checks pass.
+
+The hand now stores an uncapped mixed FIFO array of stable custody entries.
+Left-click appends eligible creatures and separate gold batches; right-click
+drops exactly the oldest entry. Invalid targets retain the complete order. The
+front model/amount stays unchanged when later entries are appended or another
+actor is inspected. The aggregate gold ledger includes every queued batch once;
+partial storage and overflow affect only the batch being dropped.
+
+Independent scenarios queue 140 mixed entries, preserve 70 held hybrids across
+feature reloads, then resume 209 gold delivery and three real meals. Head/middle/
+tail deletion, raw actor-array removal, cargo recovery, per-entry Heart-less
+origins, repeated same-kind batches, invalid drops and shared floor all preserve
+survivor order and quantities. Original single-item rejection assertions were
+updated to the user's new semantics, while duplicate-actor rejection remains.
+
+Viewport input checks cover 21 mixed pickups and exact per-click FIFO drops with
+UI/focus/stale-release protection. UI checks cover 80 entries with at most 10 rendered
+cards, far scrolling, front-model stability and actual queued-card inspection
+without reordering. The virtual canvas represents all entries; the draw bound is
+not a gameplay capacity limit. Card rebuilds detach and queue-free controls so
+the emitting GUI object can finish handling its click safely.
+
+New GPU queue probe **18/0** and existing keeper **33/0**, Heart/gold **20/0** and
+food **31/0** passed for implementer and lead (**102 graphical checks** total).
+The actual Viewport queues Muck, 450 gold, Grimble, 500 gold and Grout; each drop
+advances to the correct model/amount while all 950 gold remains accounted for.
+A 40-actor UI fixture scrolls to entries 33–39 while retaining the first item's
+pinned Next summary. Lead and independent reviewers inspected
+`keeper-mixed-queue.png`, `keeper-queue-gold-next.png`,
+`keeper-queue-grubbin-next.png`, `keeper-queue-second-gold.png` and
+`keeper-queue-scrolled.png`. Latest target, hand and textual validity cues agree.
+
+Independent code/behavior/input/visual reviews found no remaining blockers.
+There is no count cap or same-type restriction for eligible creatures/gold; this
+does not add food/landmark pickup, saving or new economy mechanics. No broad
+large-world performance or native OS/export gate is claimed. The full ordered
+queue and individual origins/amounts remain required future persistence state.
+
+## Click pickup, right drop, bottom hub and Heart gold — earlier baseline
+
+Final `tools/dev.ps1 check`: **96 scripts, zero failures**. Full
+`tools/dev.ps1 test`: **1,927 checks, zero failures**. Updated suites include
+startup25, keeper core44, behavior91, UI26, input90, shared-drop review32,
+gold core25 and independent gold review40. Lead independently executed the full
+suite and all three GPU scenarios: keeper **33/0**, food **31/0**, Heart/gold
+**20/0** (84 graphical checks). Separate core, behavior, input and visual reviews
+approved the final state with no remaining blockers.
+
+The user superseded the original gestures and floating inspector: left-click
+must pick up immediately, left release must not drop, and right-click drops the
+held creature. Its actual model/name must identify what will be dropped. Individual
+details belong inside the bottom hub. Valid connected FLOOR may be shared with
+another creature or personal bed; ownership and ledger state remain unchanged.
+
+Core drop policy changes remove occupancy restrictions. Primary core44/0 and
+independent shared-drop32/0 pass, including repeated stacks of three distinct
+named carriers retaining120 gold, original occupied pickup-cell drops, another
+owner's established bed, two eaters sharing a service tile without duplicate
+consumption, and invalid terrain/connectivity still retaining custody. Existing
+keeper behavior91/0 also passes independently. The earlier gesture counts below
+are historical; final correction evidence follows.
+
+Input90 verifies immediate left-button pickup, no left-release/extra-left drop,
+right-button drop and motion suppression until release, empty-hand orbit, UI and
+terrain rejection, gold/creature hand exclusion, source priority and storage
+overflow. Bottom-hub UI26 proves individual cycling/naming, layout at1280x800,
+no floating inspector, shared-floor drop and an unchanged held model when the
+inspected actor changes. Actual preview scenes read held state without modifying
+it and detach old models immediately; empty hands disable the studio viewport.
+
+Keeper GPU33 captures the exact Muck#3/60-gold model while inspecting Grout#2,
+then Grout's model and the named Grubbin, with readable bottom-hub details. The
+existing worker mining/haul and resident sleep/eat interruptions remain verified.
+Reviewed artifacts include `keeper-held-a-inspecting-b.png`,
+`keeper-held-worker-b.png`, and the updated `keeper-holding-valid.png`,
+`keeper-grubbin-held.png` and resident inspection frames.
+
+The new default dungeon has no prebuilt Treasury. Eight protected500-capacity
+floor cells around the Heart hold the finite3,000 starting bank. Startup25 checks
+worker mining/delivery before a Treasury, full4,000-capacity pause/spend/resume,
+Treasury expansion and sale without losing protected storage, and one-time supply.
+Gold core25/review40 verify loose/stored pickup, exact hand accounting, full and
+partial-storage overflow, worker reservation races/reloads, source blockage,
+configuration rollback, shared-hand exclusion and protected-cell build/Sell refusal.
+One review test initially failed to wait for a worker's bounded retry before
+claiming a reserved haul; its corrected oracle waits for a real live job and
+still requires zero worker cargo before keeper pickup.
+
+Heart/gold GPU20 uses the actual fresh-game configuration, observes3000/4000
+with no Treasury, lifts500 gold, rejects invalid/UI drops, stores it again,
+leaves it loose and lets an imp return it. Lead and independent reviewers inspected
+`heart-storage-bootstrap.png`, `keeper-gold-held.png`, `keeper-gold-invalid.png`,
+`heart-storage-deposited.png`, `keeper-gold-loose.png` and
+`heart-storage-worker-return.png`. Low coin piles and worn iron/coin floor markers
+keep the Heart readable. The hand shows a procedural sack/coins and exact amount.
+An edge-position label/hint overlap was fixed and independently verified. All
+art remains original procedural/code presentation; no new external asset was used.
+
+Gold carried by the keeper is physical, non-spendable custody until stored. A
+storage drop accepts free capacity and leaves overflow loose; ordinary valid floor
+gets a loose pile. No wages/payment, food pickup or recurring Heart income exists.
+Legacy fixed-Treasury probes explicitly opt out of the new bootstrap; they do not
+describe the actual start. No native OS input, export, save or stress/performance
+gate is claimed by this checkpoint.
+
+## Keeper custody, inspection and two-tile Pig Pens — earlier baseline
+
+Final `tools/dev.ps1 check`: **91 scripts, zero failures**. Full
+`tools/dev.ps1 test`: **1,783 checks, zero failures** (earlier1,571 plus core42,
+keeper behavior91, input59 and UI20). The lead executed the integrated suite.
+GPU keeper probe **25/0** and updated food probe **31/0** independently passed
+for implementer and lead. Separate core, behavior, input and UI/visual reviews
+found no remaining blocking issues.
+
+The package adds one held creature and a conditional inspection panel, without
+replacing the actor or removing its gold from the ledger. Pickup/drop synchronously
+release old behavior paths/jobs. Established beds survive; pending claims and
+meal reservations are released. Held needs, movement and work freeze, and dropping
+creates fresh behavior from the validated new position. Food cannot be consumed
+by a held creature or disappear as an interrupted meal is canceled.
+
+Primary core checks cover live IDs, eligibility, bounded naming, single custody,
+floor/Heart/portal/boundary/connectivity rules, other actors/beds, revalidation after
+terrain changes, established/pending home ownership and actor removal. A separate
+ambient feature also proves the custody contract works outside worker/resident
+modules. Independent review found raw removal of a held carrier could lose its
+untracked cargo; KeeperState.prune now retains it idempotently in the recovery
+ledger, with passing raw-removal and repeated-cleanup regressions.
+
+Behavior scenarios interrupt stone/gold/gem strikes, hauling, local eating, sleep
+and pending home claims. They exercise repeated handoffs, hybrid workers,
+feature reloads, unavailable food/routes and held-actor despawn. Worker recovery
+adopts pending cargo even when pickup removed the actor's previous behavior.
+Inspector tests send actual Viewport events to edit names, press Pick Up, close
+details while holding and attempt invalid/valid drops without leaking into terrain.
+Input checks also cover sixteen awake/sleeping camera combinations, nearer actors,
+wall occlusion, stationary actor/terrain updates, six-pixel pickup threshold,
+focused G text entry, tool refusal while held, UI/focus/orbit/tool cancellation
+and stale press IDs. Review found actor hover could suppress an existing terrain
+drag preview; the helper now suppresses only idle actor hover, and two Viewport
+regressions verify rectangle preview and commit across a creature.
+
+Actual GPU gameplay mined a carrier's60 gold, inspected/renamed it, lifted it,
+rejected a solid-tile drop and restored its original visible model on valid floor.
+The workers then delivered all400 gold from the two marked seams. A resident
+arrived, claimed a bed, slept and ate; pickup froze needs, retained its established
+bed and released an interrupted exact meal without a debit. Removing the held
+resident cleared custody/inspection. Gold/food were accounted throughout.
+
+Lead and independent reviewers inspected `keeper-worker-inspection.png`,
+`keeper-holding-valid.png`, `keeper-holding-invalid.png`,
+`keeper-worker-dropped.png`, `keeper-resident-inspection.png`,
+`keeper-grubbin-held.png`, `keeper-eating-interrupted.png` and
+`keeper-held-removed.png` in local ignored `artifacts/`. The focused panel is
+closable and capability-aware, the gripping portrait matches the hidden actor,
+and green/red drop cues have explicit text. No permanent sidebar was restored.
+Assets remain original code-drawn/procedural presentation, not final hand art.
+
+The user's Pig Pen change supersedes the earlier 3x1 rule: current minimum is
+2x1 or rotated 1x2, with one pig per two connected tiles. Actual manifest tests
+and Viewport build/tooltip checks verify the new rule; independent producer tests
+retain other minimum sizes to exercise configurable extension behavior.
+The updated food GPU probe builds `pig-pen-minimum-2x1.png`, extends to six tiles
+with capacity3, observes one pig visit all six cells, repeated meals/rest and
+conservation (five produced, four consumed, one remaining in the recorded run).
+The game still starts with3,000 stored gold; mining-only GPU fixtures opt out.
+
+No native OS input, save/load, audio, export, new performance/stress gate or
+Blender asset authoring is claimed by this package. Held needs freeze, and
+interrupted tasks replan with reset progress. A single hand/first Grubbin remains
+the prototype limit; mood, broader attraction and a second species are still open.
+
+## Pig Pen food loop and funded playtest start — earlier baseline
 
 Final `tools/dev.ps1 check`: **82 scripts, zero failures**. Final full
 `tools/dev.ps1 test`: **1,571 checks, zero failures** (earlier1,249 plus food28,

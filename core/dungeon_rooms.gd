@@ -36,6 +36,10 @@ func quote_build(definition_id: StringName, cells: Array[Vector2i]) -> Dictionar
 	quote.valid = not quote.add.is_empty() and quote.cost <= _economy.stored_gold
 	if quote.add.is_empty():
 		quote.reason = "Build on empty excavated floor"
+		for cell: Vector2i in quote.blocked:
+			if _economy.protected_storage.has(cell):
+				quote.reason = "Dungeon Heart storage is protected"
+				break
 	elif quote.cost > _economy.stored_gold:
 		quote.reason = "Need %d stored gold (%d available)" % [quote.cost, _economy.stored_gold]
 	elif not quote.blocked.is_empty():
@@ -46,7 +50,7 @@ func quote_build(definition_id: StringName, cells: Array[Vector2i]) -> Dictionar
 func quote_remove(cells: Array[Vector2i]) -> Dictionary:
 	var quote := _empty_quote()
 	for cell in _unique(cells):
-		if tiles.has(cell):
+		if tiles.has(cell) and not _economy.protected_storage.has(cell):
 			quote.remove.append(cell)
 			var definition := _registry.get_room(tiles[cell])
 			quote.refund += floori(definition.gold_cost_per_tile * definition.sell_refund_ratio)
@@ -54,6 +58,11 @@ func quote_remove(cells: Array[Vector2i]) -> Dictionary:
 			quote.blocked.append(cell)
 	quote.valid = not quote.remove.is_empty()
 	quote.reason = "Stored gold drops to the floor; refund uses remaining storage or drops beside it" if quote.valid else "Select existing room tiles to sell"
+	if not quote.valid:
+		for cell: Vector2i in quote.blocked:
+			if _economy.protected_storage.has(cell):
+				quote.reason = "Dungeon Heart storage cannot be sold"
+				break
 	return quote
 
 
@@ -110,7 +119,7 @@ func get_room_at(cell: Vector2i) -> RoomState:
 
 
 func _can_place(cell: Vector2i) -> bool:
-	return _grid.is_inside(cell) and _grid.get_tile(cell) == DungeonGrid.Tile.FLOOR and not tiles.has(cell)
+	return _grid.is_inside(cell) and _grid.get_tile(cell) == DungeonGrid.Tile.FLOOR and not tiles.has(cell) and not _economy.protected_storage.has(cell)
 
 
 func _empty_quote() -> Dictionary:

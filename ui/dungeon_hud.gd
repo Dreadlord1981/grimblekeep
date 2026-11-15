@@ -46,6 +46,10 @@ var _resident_hint: Label
 var _worker_rows: Dictionary[int, Control] = {}
 var _resident_rows: Dictionary[int, Control] = {}
 var _refresh_in := 0.0
+var _inspector: CreatureInspector
+var _footer_panel: PanelContainer
+var _footer_content: VBoxContainer
+var _keeper_queue: KeeperQueue
 
 
 func setup(game_context: GameContext, keeper: KeeperController) -> void:
@@ -59,6 +63,10 @@ func setup(game_context: GameContext, keeper: KeeperController) -> void:
 	_build_footer()
 	_build_debug()
 	_build_workers()
+	_inspector = CreatureInspector.new()
+	_hub.add_child(_inspector)
+	_inspector.setup(context, controller)
+	_input_panels.append(_inspector)
 	controller.ui_hit_test = _is_ui_position
 	var hand := HandScript.new() as KeeperHand
 	hand.controller = controller
@@ -67,13 +75,17 @@ func setup(game_context: GameContext, keeper: KeeperController) -> void:
 	controller.preview_changed.connect(_refresh_preview)
 	controller.construction_changed.connect(_refresh_construction)
 	controller.room_action_finished.connect(_show_room_result)
+	controller.keeper_action_finished.connect(_show_keeper_result)
 	context.beds.changed.connect(_refresh_residents)
 	context.food.changed.connect(_refresh_food)
+	context.keeper.changed.connect(_on_keeper_changed)
 	_refresh_marks(context.last_marked_cell)
 	_refresh_economy_and_workers()
 
 
 func _process(delta: float) -> void:
+	if _footer_panel != null and _hub != null:
+		_footer_panel.offset_top = -maxf(104, _footer_content.get_combined_minimum_size().y + 24) - 16
 	if _feedback_remaining > 0.0:
 		_feedback_remaining -= delta
 		if _feedback_remaining <= 0.0:
@@ -84,9 +96,16 @@ func _process(delta: float) -> void:
 		_refresh_in = 0.15
 		_refresh_economy_and_workers()
 	if _cursor_feedback != null:
-		_cursor_feedback.visible = controller.is_constructing() and context.hovered_cell != KeeperController.INVALID_CELL and not controller.is_pointer_over_ui(controller.pointer_position)
+		var holding: bool = context.keeper.is_holding()
+		_cursor_feedback.visible = (holding or (controller.is_constructing() and context.hovered_cell != KeeperController.INVALID_CELL)) and not controller.is_pointer_over_ui(controller.pointer_position)
+		if holding:
+			var quote: Dictionary = controller.get_drop_preview()
+			_cursor_feedback.text = "Right-click: drop next" if quote.get("valid", false) else quote.get("reason", "Cannot drop here")
+			_cursor_feedback.add_theme_color_override("font_color", Color(0.62, 0.82, 0.52) if quote.get("valid", false) else Color(0.97, 0.48, 0.36))
 		var area := get_viewport().get_visible_rect().size
-		var pointer := controller.pointer_position + Vector2(24, 22)
+		var pointer := controller.pointer_position + (Vector2(58, 64) if holding else Vector2(24, 22))
+		if holding and controller.pointer_position.y < 185:
+			pointer = controller.pointer_position + Vector2(58, 0)
 		_cursor_feedback.position = Vector2(clampf(pointer.x, 8, maxf(8, area.x - _cursor_feedback.size.x - 8)), clampf(pointer.y, 70, maxf(70, area.y - _cursor_feedback.size.y - 128)))
 	if _debug_panel != null and _debug_panel.visible:
 		_debug.text = "DIAGNOSTICS\nFPS  %d     ACTORS  %d\nTARGET  %s\nCAMERA  %.1f m\nCONTENT  modular definitions" % [Engine.get_frames_per_second(), context.actors.size(), str(context.hovered_cell), controller.distance]
@@ -134,14 +153,22 @@ func _build_header() -> void:
 
 func _build_footer() -> void:
 	var panel := _panel()
+	_footer_panel = panel
+	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	panel.offset_left = 16
 	panel.offset_right = -16
 	panel.offset_top = -120
 	panel.offset_bottom = -16
 	_root.add_child(panel)
+	_footer_content = VBoxContainer.new()
+	_footer_content.add_theme_constant_override("separation", 8)
+	panel.add_child(_footer_content)
+	_keeper_queue = KeeperQueue.new()
+	_footer_content.add_child(_keeper_queue)
+	_keeper_queue.setup(context)
 	_hub = DungeonHub.new()
-	panel.add_child(_hub)
+	_footer_content.add_child(_hub)
 	_hub.setup(context)
 	_hub.room_chosen.connect(controller.set_build_room)
 	_hub.sell_chosen.connect(controller.set_sell_rooms)
@@ -167,8 +194,16 @@ func select_tab(tab: StringName) -> void:
 
 func _on_tab_changed(tab: StringName) -> void:
 	active_tab = tab
+	if _inspector != null:
+		_inspector.tab_visible = tab == &"creatures"
+		_inspector.refresh()
 	if tab == &"creatures" and controller.is_constructing():
 		controller.exit_construction()
+
+
+func _on_keeper_changed() -> void:
+	if context.keeper.is_holding() and active_tab != &"creatures":
+		select_tab(&"creatures")
 
 
 func _refresh_construction() -> void:
@@ -202,6 +237,15 @@ func _show_room_result(result: Dictionary) -> void:
 		_action_feedback.text = result.get("reason", "Cannot change these tiles")
 	_action_feedback.tooltip_text = _action_feedback.text
 	_action_feedback.add_theme_color_override("font_color", INK if success else Color(0.97, 0.48, 0.36))
+
+
+func _show_keeper_result(result: Dictionary) -> void:
+	if _action_feedback == null:
+		return
+	_feedback_remaining = 4.0
+	_action_feedback.text = result.get("reason", "Keeper action completed" if result.get("success", false) else "Cannot do that here")
+	_action_feedback.tooltip_text = _action_feedback.text
+	_inspector.refresh()
 
 
 func _build_debug() -> void:
@@ -280,7 +324,7 @@ func _refresh_economy_and_workers() -> void:
 			ground += amount
 		var capacity: int = context.economy.treasury_capacity
 		_stored_gold.text = "GOLD   %d / %d" % [context.economy.stored_gold, capacity] if capacity >= 0 else "STORED GOLD   %d" % context.economy.stored_gold
-	_stored_gold.tooltip_text = "Spendable Treasury gold.\nCarried %d · Ground %d · Pending recovery %d" % [carried, ground, context.economy.pending_gold()]
+	_stored_gold.tooltip_text = "Spendable gold in Heart storage and Treasury rooms.\nCarried %d · Ground %d · Keeper %d · Pending recovery %d" % [carried, ground, context.economy.keeper_gold, context.economy.pending_gold()]
 	_refresh_food()
 	_worker_count.text = "WORKERS   %d" % visible_workers.size()
 	_refresh_residents()
@@ -388,12 +432,13 @@ func _creature_card(definition: CreatureDefinition, resident: bool) -> Control:
 
 
 func _refresh_creature_card(row: Control, actor: CreatureState, definition: CreatureDefinition, resident: bool) -> void:
-	row.get_node("Info/Name").text = "%s #%d" % [definition.display_name, actor.id]
+	var label := actor.custom_name if not actor.custom_name.is_empty() else "%s #%d" % [definition.display_name, actor.id]
+	row.get_node("Info/Name").text = label
 	row.get_node("Info/Status/Action").texture = _action_icon(actor.action)
 	var meter: ProgressBar = row.get_node("Info/Status/Meter")
 	var value: Label = row.get_node("Info/Status/Value")
 	var action := String(actor.action).capitalize()
-	row.tooltip_text = "%s #%d · %s\n%s" % [definition.display_name, actor.id, action, actor.job_label]
+	row.tooltip_text = "%s · %s\n%s" % [label, action, actor.job_label]
 	if resident:
 		_refresh_resident_card(row, actor, definition, meter, value)
 	else:

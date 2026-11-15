@@ -46,8 +46,9 @@ reach into UI or unrelated scene paths. Connect to external signals using the
 Node receiver so Godot disconnects them when the feature is freed.
 
 The original `wander_feature.gd` remains a small test/example feature but is no
-longer in the foundation manifest. `worker_feature.gd` now owns worker movement;
-do not enable both for the same actors.
+longer in the foundation manifest. It respects keeper custody and clears old
+targets on pickup/drop. `worker_feature.gd` owns worker movement in the actual
+game; do not enable both for the same actors.
 The context publishes `actor_added`, `actor_removed`, `excavation_marks_changed`, and `simulation_ticked`;
 the grid publishes `tile_changed`. Define new events/contracts deliberately when
 new systems require them rather than building a generic global event bus.
@@ -124,7 +125,7 @@ extract 20 per strike. Gem nodes yield 20 more slowly and stay in place, recordi
 generated supply explicitly. Neither mineral creates a separate inventory currency.
 
 Gold conservation after each simulation tick is:
-`unmined + carried + loose + stored + pending recovery + spent = initial finite supply + gem generation + sale refunds`.
+`unmined + carried + keeper hand + loose + stored + pending recovery + spent = initial finite supply + gem generation + sale refunds`.
 `accounted_gold()` returns the left side minus refunds, preserving the common
 comparison against initial finite supply plus gem generation. Starting room tiles
 also have salvage value, so refunds are explicit sources, never assumed to have
@@ -185,19 +186,22 @@ and capacity reductions spill overflow locally. Sale refunds use each room's
 Spending debits physical stock in deterministic row-major order. No wages or
 save migration are implemented yet.
 
-The starting Treasury is placed by trusted scenario `place_initial()`; ordinary
-input uses priced `build()`. Generic paving/color and optional tile scenes belong
+Legacy scenario fixtures can place Treasury rooms with trusted `place_initial()`;
+ordinary input uses priced `build()`. Generic paving/color and optional tile scenes belong
 to `DungeonRoomView`. Gold props read each actual tile balance and the definition's
 small/large chest thresholds. New room mechanics can observe this state through
 feature modules. Independent tests build a new room and storage type, including
 their toolbar entries, without adding ID switches to core or presentation.
 
-Fresh app scenes set `starting_gold=3000` for the user's room playtesting. The
-layout adds two Treasury tiles to the earlier four-cell start, deposits the bank
-into real 500-capacity cells and includes it in `initial_gold` alongside finite
-seams. This happens once during scenario initialization. No Heart/portal income
-is introduced. The layout helper defaults to zero, and finite mining/GPU fixtures
-set the app property to zero before adding the scene to the tree.
+Fresh app scenes set `starting_gold=3000` for the user's room playtesting, deposited
+once into eight protected floor cells around the Heart (500 each). No Treasury
+room is prebuilt. `GoldEconomy.protected_storage` is a trusted scenario source;
+`configure_treasury()` merges its capacity with built-room capacity. Room edits
+cannot erase it, and room commands refuse construction/sales on protected cells.
+Trusted terrain edits retain displaced stock as loose gold; reopening restores
+capacity. Initial supply includes the finite bank and seams, with no Heart income.
+The layout helper defaults to zero gold and Heart storage. Legacy fixed-Treasury
+fixtures pass its third argument false or set app `use_heart_storage=false`.
 
 ## Residents, personal beds and rest ownership
 
@@ -259,7 +263,7 @@ backlog. Source state retains partial progress through harmless room merges.
 
 An optional positive `food_tiles_per_unit` pools capacity and one production clock
 across each connected room. `food_minimum_size` must fit, allowing rotation. The
-Pig Pen requires 3x1, supports floor(tile count / 3) pigs and produces one per 12
+Pig Pen requires 2x1, supports floor(tile count / 2) pigs and produces one per 12
 seconds. Other producers retain per-tile storage by default. Source `cells` track
 the full pool, so old stock on any member tile counts against its shared limit.
 Shrinking a room never deletes food; excess stock pauses births until space exists.
@@ -295,6 +299,95 @@ service need their own reviewed contracts; they are not implemented now.
 `FoodView` follows stable unit IDs and instantiates the definition's scene per unit,
 with a generic fallback. Cave pig motion is not resident AI: food cannot inflate
 creature counts. Reservation changes preserve existing view nodes and growth.
+
+## Keeper custody and creature inspection
+
+`GameContext.keeper` owns a `KeeperState`. Inspection/custody refer to live
+`CreatureState` identities; pickup never creates a replacement actor. Stable
+definition eligibility (`keeper_pickup_allowed`) is independent of job/species.
+`inspect()`, `clear_inspection()` and `rename_selected()` serve the inspector;
+custom names are limited to 32 characters, without control characters, with an
+empty-name fallback. `pickup()`, `quote_drop()` and `drop()` own the gameplay
+commands. `changed` refreshes views; synchronous `actor_control_changed(actor)`
+lets each feature release its own routes/jobs before the command returns.
+
+Held actors remain in the session population and gold ledger. `is_held` freezes
+behavior, need drain/recovery, work and food consumption; cargo stays on the actor.
+An established personal bed stays owned; pending bed claims and exact meal
+reservations are released. Features discard old behavior state on pickup/drop,
+then replan from the dropped position rather than resuming a stale path or strike.
+Core meal/bed commands and direct behavior entry points also reject held actors.
+The example wandering feature demonstrates the same contract for another module.
+
+Drop quotes/commits require FLOOR connected by strict A* to a walkable cardinal
+neighbor of the Heart. Creature and bed occupancy do not forbid shared floor;
+dropping onto another owner's bed does not transfer its ownership.
+Heart-less test scenarios use the pickup-origin component. Invalid commits retain
+custody and explain the failed condition. Removing a held actor clears its hand
+and inspector references, releases needs/bed reservations and retains cargo in
+the existing pending recovery ledger. Raw actor-array edits are pruned as well;
+the worker module adopts pending cargo even without a previous active behavior.
+The keeper uses a weak context reference to avoid a RefCounted ownership cycle.
+
+`KeeperCreatureTargeting` intersects state/definition body volumes against the
+camera ray and compares the nearest terrain hit for wall occlusion. Configurable
+awake/sleep bounds scale with species; `BedState.lift_at()` shares mattress height
+with the Grubbin view. It does not depend on a rendered mesh or node name.
+`KeeperCreatureInput` owns creature input separately from excavation.
+Left-click picks up immediately and right-click attempts a drop; left release
+never drops. Species hub buttons inspect individuals without lifting; G/Pick Up
+remain optional commands. UI/focus/tool changes cannot drop the held actor or
+commit a stale terrain drag. While holding, right mouse is reserved for dropping;
+empty-hand RMB orbit and Build/Sell cancellation remain in the controller.
+
+`CreatureInspector` owns individual details/editing inside the bottom hub and
+invokes commands; the main HUD registers it for input isolation. World views hide
+the held actor while the cursor shows a gripping hand, the held instance's model
+and name. The model preview is independent of inspection selection and never
+changes simulation position. Drop feedback uses authoritative quotes. Closing
+details clears inspection, not custody. Species portraits cycle through current
+individuals for inspection, and I inspects the hovered creature without lifting.
+
+Gold shares the hand queue with creatures. `KeeperState.is_holding()` reports any
+queued entries and construction guards use it; input still allows more pickups.
+`GoldEconomy.keeper_gold` is the aggregate held-gold balance;
+`KeeperState.held_gold` describes only the front batch. `gold_at()` prefers
+a visible loose pile over stock on the same floor cell. `pickup_for_keeper()`
+debits that source atomically; `drop_from_keeper()` fills local available storage
+and leaves overflow loose, debiting only the requested front batch. These operations preserve
+accounting across worker competition and room changes. Held gold is not spendable
+and never becomes a wage/payment implicitly when dropped near a creature.
+
+`HeldCreaturePreview` uses an isolated transparent SubViewport to render the
+definition's view scene or generic fallback, bound to the held actor's ID rather
+than inspection. It reads `sync(actor)` but resets only the view's studio transform,
+never simulation position. Gold custody uses an original sack/coin model and
+amount. Preview binds the front entry's stable ID, not the latest pickup or
+inspection; appending leaves its model intact. Old models detach on front changes; empty
+hands disable rendering. All preview controls ignore mouse input.
+`KeeperHandItem` stores a unique custody ID, kind, actor or gold amount and pickup
+origin. `KeeperState` owns its ordered array; `get_items()` returns an array copy
+whose entries are read-only to consumers, and `peek_item()` identifies the next
+drop. There is no count cap or same-type restriction. Pickup appends, and a valid
+drop removes exactly the oldest entry. Invalid drops retain order. Every queued
+actor keeps `is_held=true` until its own release; removing one actor prunes only
+that entry and recovers cargo without disturbing survivors. Heart-less scenarios
+validate each entry's own origin, rather than the most recent pickup location.
+
+`held_actor`/`held_gold` describe only the front; `held_count` counts all entries
+and `total_held_gold` reads the aggregate ledger. Each gold pickup remains a
+separate FIFO batch. `drop_from_keeper(cell, requested)` debits only that batch;
+the total remains included once in conservation. Ledger transfer methods are
+trusted primitives owned by KeeperState; gameplay must use keeper commands so
+queue membership and the physical balance agree after every completed command.
+
+`KeeperQueue` renders an ordered strip above the bottom hub. A virtual canvas
+represents every entry while only visible cards and a small overscan are created.
+Scrolling and card inspection never reorder the queue. A pinned count/next-item
+summary remains visible when scrolling to later entries. This rendering bound
+does not limit gameplay capacity. No save/load implementation is introduced:
+later persistence must capture the full ordered queue, names, origins, gold and
+safe resumption alongside the rest of the session.
 
 ## Room art and desktop icon controls
 

@@ -25,6 +25,9 @@ func set_route(goal_cell: Vector2i, goal_world: Vector3) -> bool:
 
 
 func follow(delta: float, speed: float) -> int:
+	if _actor.is_held:
+		clear()
+		return Travel.BLOCKED
 	if path.is_empty():
 		return Travel.BLOCKED
 	for index in range(_path_index, path.size()):

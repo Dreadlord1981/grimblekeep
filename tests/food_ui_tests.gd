@@ -30,13 +30,13 @@ func _run() -> void:
 	await process_frame
 	var button: Button = _hud.get("_construction_buttons")[PEN]
 	_check(button.is_visible_in_tree() and "Pig Pen" in button.tooltip_text and "75 gold" in button.tooltip_text, "Rooms tab discovers the data-defined Pig Pen with its price")
-	_check("Minimum 3×1 or 1×3" in button.tooltip_text and "per 3 room tiles" in button.tooltip_text, "Pig Pen tooltip explains the straight minimum footprint and shared stocking density")
+	_check("Minimum 2×1 or 1×2" in button.tooltip_text and "per 2 room tiles" in button.tooltip_text, "Pig Pen tooltip explains the straight minimum footprint and shared stocking density")
 	_ui_click(button)
-	_drag_cells(PEN_CELL, PEN_CELL + Vector2i(2, 0))
-	_check(_context.rooms.tiles.get(PEN_CELL) == PEN and _context.rooms.tiles.get(PEN_CELL + Vector2i(2, 0)) == PEN and _context.economy.stored_gold == 135, "Pig Pen icon builds a straight three-tile room and charges exactly 225 gold")
+	_drag_cells(PEN_CELL, PEN_CELL + Vector2i(1, 0))
+	_check(_context.rooms.tiles.get(PEN_CELL) == PEN and _context.rooms.tiles.get(PEN_CELL + Vector2i(1, 0)) == PEN and _context.economy.stored_gold == 210, "Pig Pen icon builds a straight two-tile room and charges exactly 150 gold")
 	var hub: DungeonHub = _hud.get("_hub")
-	_check(hub.room_badges[PEN].text == "1", "Three Pig Pen tiles form one connected room in its count overlay")
-	_check(_context.food.produce(PEN_CELL, PIG, 2) == 1, "Three-tile Pig Pen has shared capacity for exactly one pig")
+	_check(hub.room_badges[PEN].text == "1", "Two Pig Pen tiles form one connected room in its count overlay")
+	_check(_context.food.produce(PEN_CELL, PIG, 2) == 1, "Two-tile Pig Pen has shared capacity for exactly one pig")
 	_check(_hud.get("_food_count").text == "FOOD   1", "Food production immediately updates the actual header count")
 	_check("Cave pig 1 / 1" in button.tooltip_text and not "Capacity 3" in button.tooltip_text, "Pig Pen tooltip shows pooled stock and capacity rather than generic tile count")
 	_check(not "seconds" in button.tooltip_text and not "countdown" in button.tooltip_text, "Production timing is not exposed as a mobile-style countdown")
@@ -68,7 +68,7 @@ func _run() -> void:
 	_check(_context.food.reserve_meal(_eater) != null and _context.food.consume(_eater) > 0.0, "Fixture consumes one locally reserved compatible meal")
 	_check(_hud.get("_food_count").text == "FOOD   0" and "Cave pig 0 / 1" in button.tooltip_text, "Consumption immediately updates food count and source tooltip")
 	_context.food.produce(PEN_CELL, PIG, 1)
-	_context.rooms.remove([PEN_CELL, PEN_CELL + Vector2i(1, 0), PEN_CELL + Vector2i(2, 0)])
+	_context.rooms.remove([PEN_CELL, PEN_CELL + Vector2i(1, 0)])
 	_check(_hud.get("_food_count").text == "FOOD   1" and _context.food.total_at(PEN_CELL) == 1, "Selling a food room preserves its remaining physical food in the HUD")
 	_check(hub.room_badges[PEN].text == "0", "Selling the last Pig Pen clears its connected-room overlay")
 	_check(_context.food.total_units + _context.food.consumed_units == _context.food.produced_units, "UI operations preserve the physical food ledger")
@@ -106,8 +106,8 @@ func _fixture() -> void:
 	pen.gold_cost_per_tile = 75
 	pen.food_type = PIG
 	pen.food_capacity_per_tile = 1
-	pen.food_minimum_size = Vector2i(3, 1)
-	pen.food_tiles_per_unit = 3
+	pen.food_minimum_size = Vector2i(2, 1)
+	pen.food_tiles_per_unit = 2
 	pen.food_production_seconds = 12.0
 	var vault := RoomDefinition.new()
 	vault.id = &"food_ui.vault"

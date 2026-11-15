@@ -7,12 +7,20 @@ var _random := RandomNumberGenerator.new()
 
 
 func setup(game_context: GameContext) -> void:
+	if context != null and context.keeper != null and context.keeper.actor_control_changed.is_connected(_on_control_changed):
+		context.keeper.actor_control_changed.disconnect(_on_control_changed)
 	super.setup(game_context)
+	if context.keeper != null:
+		context.keeper.actor_control_changed.connect(_on_control_changed)
+	_targets.clear()
 	_random.seed = 41821
 
 
 func tick(delta: float) -> void:
 	for actor in context.actors:
+		if actor.is_held:
+			_targets.erase(actor.id)
+			continue
 		var definition := context.registry.get_creature(actor.definition_id)
 		if definition == null:
 			continue
@@ -37,3 +45,7 @@ func _choose_target(actor: CreatureState) -> void:
 		if context.grid.is_walkable(next):
 			_targets[actor.id] = context.grid.cell_to_world(next)
 			return
+
+
+func _on_control_changed(actor: CreatureState) -> void:
+	_targets.erase(actor.id)

@@ -25,6 +25,9 @@ func job_for(actor_id: int) -> WorkerJob:
 
 
 func assign(actor: CreatureState, definition: CreatureDefinition) -> WorkerJob:
+	if actor.is_held:
+		release(actor.id)
+		return null
 	if _jobs.has(actor.id):
 		return _jobs[actor.id]
 	var start := _context.grid.world_to_cell(actor.position)

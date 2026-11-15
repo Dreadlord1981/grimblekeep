@@ -9,6 +9,9 @@ extends Resource
 @export_range(0.1, 10.0) var move_speed: float = 1.2
 @export var view_scene: PackedScene
 @export var portrait: Texture2D
+@export var keeper_pickup_allowed: bool = true
+@export var keeper_pick_size := Vector3(1.1, 1.5, 1.1)
+@export var keeper_sleep_pick_size := Vector3(1.2, 0.7, 1.6)
 @export var capabilities: Array[StringName] = []
 @export var work_rate: float = 1.0
 @export var carry_capacity: int = 60
@@ -36,6 +39,8 @@ func validation_error() -> String:
 		return "Creature requires an ID and display name"
 	if not is_finite(scale_factor) or not is_finite(move_speed) or scale_factor <= 0 or move_speed <= 0:
 		return "Creature scale and move speed must be finite and positive"
+	if not keeper_pick_size.is_finite() or not keeper_sleep_pick_size.is_finite() or keeper_pick_size.x <= 0 or keeper_pick_size.y <= 0 or keeper_pick_size.z <= 0 or keeper_sleep_pick_size.x <= 0 or keeper_sleep_pick_size.y <= 0 or keeper_sleep_pick_size.z <= 0:
+		return "Creature picking bounds must be finite and positive"
 	if not is_finite(work_rate) or work_rate <= 0 or carry_capacity <= 0:
 		return "Creature work rate and carry capacity must be positive"
 	if bed_size.x <= 0 or bed_size.y <= 0 or rest_room_tag == &"":

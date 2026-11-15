@@ -7,10 +7,13 @@ var _arrival_in := 0.0
 
 
 func setup(game_context: GameContext) -> void:
+	if context != null and context.keeper.actor_control_changed.is_connected(_on_actor_control_changed):
+		context.keeper.actor_control_changed.disconnect(_on_actor_control_changed)
 	for behavior in behaviors.values():
 		behavior.cancel()
 	behaviors.clear()
 	super.setup(game_context)
+	context.keeper.actor_control_changed.connect(_on_actor_control_changed)
 	_arrival_in = 0.0
 
 
@@ -25,6 +28,8 @@ func tick(delta: float) -> void:
 		if definition == null or not (&"rest" in definition.capabilities or &"eat" in definition.capabilities):
 			continue
 		residents[actor.id] = true
+		if actor.is_held:
+			continue
 		if not behaviors.has(actor.id):
 			behaviors[actor.id] = ResidentBehavior.new(context, actor)
 		behaviors[actor.id].tick(delta, definition)
@@ -66,3 +71,13 @@ func _try_arrival() -> void:
 func _exit_tree() -> void:
 	for behavior in behaviors.values():
 		behavior.cancel()
+
+
+func _on_actor_control_changed(actor: CreatureState) -> void:
+	if behaviors.has(actor.id):
+		behaviors[actor.id].cancel()
+		behaviors.erase(actor.id)
+	context.food.release(actor.id)
+	var bed := context.beds.get_bed(actor.id)
+	if actor.is_held and bed != null and not bed.established:
+		context.beds.release(actor.id)

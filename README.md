@@ -1,7 +1,7 @@
 # Grimblekeep
 
 A real-time 3D dungeon game about building a home for unpleasant little creatures.
-Godot 4.7.2 Standard / GDScript. Current slice: excavation, mining, Treasury/Lair/Pig Pen construction and a Grubbin that eats and sleeps.
+Godot 4.7.2 Standard / GDScript. Current slice: excavation, mining, Treasury/Lair/Pig Pen construction, living Grubbins and keeper creature inspection/pickup/drop.
 
 ## Run
 
@@ -22,11 +22,13 @@ read `[Environment]::GetEnvironmentVariable('BLENDER_EXE', 'User')` directly.
 Background Python automation was verified without opening a window or saving a
 file. Existing game assets are still original procedural meshes and SVGs.
 
-Fresh playtests start with **3,000 stored gold** in a six-tile Treasury, so rooms
-can be tested immediately. This is a finite starting bank; each tile still holds
-500 gold. Mining pauses while storage is full and resumes after construction
-spends some of it. The scene's `starting_gold` property can be set to zero for
-mining-only test fixtures.
+Fresh playtests start with **3,000 stored gold** around the Dungeon Heart, so rooms
+can be tested immediately. Eight protected floor tiles hold 500 gold each (4,000
+total capacity). No Treasury is prebuilt; imps deposit into this starting area
+until you build more storage. Heart storage cannot be sold or built over.
+This is a finite starting bank. Mining pauses when reachable storage is full and
+resumes after spending or expansion. Test fixtures can set `starting_gold=0`;
+`use_heart_storage=false` explicitly selects the older Treasury fixture.
 
 Controls: WASD/arrows or middle drag to pan, right drag or Q/E to orbit, wheel to
 zoom, Home to return to the Heart. The keeper hand marks stone, gold and gem tiles
@@ -34,11 +36,37 @@ for excavation by default; no tool switch is needed. Click or drag an inclusive
 rectangle to toggle marks, preserving marks outside it. Repeat to unmark. Ground,
 the Heart and the portal are ignored. Shift marks only, Ctrl unmarks only, Escape
 clears all marks, F3 toggles diagnostics.
+
+**Left-click creatures or gold to add them to the hand queue; right-click valid
+floor to drop the oldest item.** Mixed pickups have no item-count limit. Releasing
+the left button never drops. The hand shows the next item's model/name or gold
+amount. The numbered queue sits above the bottom hub, highlights the next entry
+and scrolls to later entries. Clicking a creature card inspects it without
+changing the drop order. Individual details live in the bottom hub: portrait/name,
+current activity, carried gold, supported needs and personal bed. Select a member
+through its species portrait to inspect without lifting. Enter saves an edited
+name; an empty name uses its species and number. Repeated pickups append rather
+than replace held items; the same creature cannot be queued twice.
+Invalid drops keep it held and show the reason. RMB camera orbit works when the
+hand is empty. Open floor must connect to the dungeon around the Heart; solid
+terrain and landmarks are invalid drop targets. Creatures may share valid floor,
+including an occupied tile, their original pickup tile or another creature's bed.
+Held creatures pause their routines and needs, retaining cargo and established
+beds. Pending bed claims and active meal/work reservations are released. After
+dropping, they find a suitable task from their new position. Pigs are food and
+are not eligible for creature inspection/pickup.
+
+Gold uses the same mixed queue: each loose-pile or stored-gold pickup remains a
+separate batch, dropped in pickup order. A storage tile accepts what
+fits; excess remains as loose gold. Elsewhere it becomes a recoverable pile that
+imps can haul. Loose piles take precedence over stock underneath. Held gold is
+accounted for but is not spendable until stored again. Additional gold and
+creatures can be picked up while anything is already queued.
 Marked blocks retain a pulsing amber surface/edge glow on top and sides. Green plus
 symbols preview added marks and red X symbols preview removals, with exact counts
 in contextual feedback before release. Workers automatically take reachable marked jobs.
 Stone becomes walkable floor. Gold seams contain 200 gold; workers mine in small
-strikes, carry up to 60 and deliver to the starting treasury. Gems remain in place
+strikes, carry up to 60 and deliver to Heart storage or a built Treasury. Gems remain in place
 and generate gold more slowly. Deposited gold is spendable; loose and carried gold
 are detailed in the gold tooltip. Sale refunds also use available Treasury space as
 described below. Cancel marks to stop further work.
@@ -82,7 +110,7 @@ Bed footprints, rest rates, appetite and future wage requirements come from spec
 definitions; larger footprints must actually fit, without overlapping other beds.
 
 Build a **Pig Pen** using the pig icon in Rooms for 75 gold per tile. A connected
-pen needs a 3x1 (or rotated 1x3) footprint before pigs appear. Every three tiles
+pen needs a 2x1 (or rotated 1x2) footprint before pigs appear. Every two tiles
 provide capacity for one pig, rounded down. Each pen produces one pig every 12
 seconds until full. Pigs start small, grow over 30 simulation seconds and wander
 their connected fenced enclosure. Hungry Grubbins reserve a pig, meet it locally
@@ -106,7 +134,7 @@ input, worker and room integration checks and exits nonzero on failures.
 `artifacts/foundation.png`, then exits. Export templates are not needed to run locally.
 
 This is an early living-dungeon sandbox, not the complete pet dungeon. Mood,
-wages, cooking/crafting, combat, a second species, keeper pickup/drop, work-based
+wages, cooking/crafting, combat, a second species, work-based
 leveling and saves remain later packages. Food definitions, producer rooms and
 meal reservations support later extensions; no cooking or wage payment exists yet.
 See `LORE.md` for the accepted first-creature and

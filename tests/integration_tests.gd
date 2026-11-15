@@ -20,6 +20,7 @@ func _run() -> void:
 	var app := scene.instantiate()
 	# Exercise the mining loop with free storage; the funded start has its own test.
 	app.starting_gold = 0
+	app.use_heart_storage = false
 	root.add_child(app)
 	await process_frame
 	await process_frame

@@ -136,7 +136,7 @@ func _test_mine_build_loop() -> void:
 	var registry := ContentRegistry.new()
 	registry.register_module(load("res://content/modules/foundation.tres"))
 	var context := GameContext.new(layout.create(), registry)
-	layout.setup_rooms(context)
+	layout.setup_rooms(context, 0, false)
 	for cell in [Vector2i(12, 16), Vector2i(16, 14), Vector2i(7, 15)]:
 		context.spawn_creature(&"foundation.imp", cell)
 	var feature := preload("res://content/features/worker_feature.gd").new()

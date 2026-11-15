@@ -5,6 +5,8 @@ extends Node3D
 signal preview_changed(changes: Dictionary)
 signal construction_changed
 signal room_action_finished(result: Dictionary)
+signal keeper_action_finished(result: Dictionary)
+signal drop_preview_changed(quote: Dictionary)
 
 const INVALID_CELL := Vector2i(-1, -1)
 const MIN_DISTANCE := 12.0
@@ -22,6 +24,9 @@ var pointer_position := Vector2.ZERO
 var build_room_id: StringName = &""
 var removing_rooms := false
 var _overlay: Node3D
+var _creature_input: KeeperCreatureInput
+var _hovered_actor_id := -1
+var _drop_preview: Dictionary = {}
 var _preview_changes: Dictionary = {"add": [], "remove": [], "blocked": []}
 var _drag_start := INVALID_CELL
 var _drag_end := INVALID_CELL
@@ -30,7 +35,11 @@ var _hover_mode: int = GameContext.MarkOperation.TOGGLE
 
 
 func setup(game_context: GameContext) -> void:
+	if game_context == null or game_context.grid == null:
+		return
 	context = game_context
+	_creature_input = KeeperCreatureInput.new(self, context)
+	_creature_input.action_finished.connect(_on_keeper_action_finished)
 	_overlay = OverlayScript.new()
 	_overlay.grid = context.grid
 	add_child(_overlay)
@@ -47,6 +56,8 @@ func setup(game_context: GameContext) -> void:
 	context.grid.tile_changed.connect(_on_terrain_changed)
 	context.rooms.changed.connect(_refresh_preview)
 	context.economy.changed.connect(_refresh_preview)
+	context.keeper.changed.connect(_on_keeper_changed)
+	context.simulation_ticked.connect(_on_simulation_ticked)
 	_show_marks(context.last_marked_cell)
 
 
@@ -77,6 +88,9 @@ func _input(event: InputEvent) -> void:
 			_update_pointer_preview(event.position)
 		if previous_mode != _hover_mode:
 			_refresh_preview()
+	if _creature_input.observe(event):
+		get_viewport().set_input_as_handled()
+		return
 	if _drag_start == INVALID_CELL:
 		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
@@ -101,9 +115,20 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.keycode == KEY_ESCAPE:
 			if is_constructing():
 				exit_construction()
+			elif context.keeper.is_holding():
+				_cancel_drag()
+			elif context.keeper.inspected_actor != null:
+				_cancel_drag()
+				context.keeper.clear_inspection()
 			else:
 				_cancel_drag()
 				context.clear_excavation_marks()
+			get_viewport().set_input_as_handled()
+		elif event.keycode == KEY_G:
+			pickup_selected()
+			get_viewport().set_input_as_handled()
+		elif event.keycode == KEY_I:
+			inspect_hovered()
 			get_viewport().set_input_as_handled()
 	var pointer: Vector2 = event.position if event is InputEventMouse else get_viewport().get_mouse_position()
 	if is_pointer_over_ui(pointer):
@@ -111,7 +136,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
+				if not is_constructing() and _creature_input.begin(event.position):
+					get_viewport().set_input_as_handled()
+					return
 				_begin_drag(event)
+			elif _creature_input.finish(event.position):
+				get_viewport().set_input_as_handled()
+				return
 			elif _drag_start != INVALID_CELL:
 				_finish_drag(event.position)
 			else:
@@ -149,28 +180,43 @@ func recenter() -> void:
 func get_target_cell(screen: Vector2) -> Vector2i:
 	if camera == null or context == null:
 		return INVALID_CELL
-	var origin := camera.project_ray_origin(screen)
-	var direction := camera.project_ray_normal(screen)
-	var nearest_distance := INF
-	var target := INVALID_CELL
-	# Terrain bounds come from the grid contract, not physics nodes or view paths.
-	# A nearest hit respects raised rock instead of selecting the floor behind it.
-	var half_tile := DungeonGrid.TILE_SIZE * 0.5
-	for y in context.grid.height:
-		for x in context.grid.width:
-			var cell := Vector2i(x, y)
-			var center := context.grid.cell_to_world(cell)
-			var top := context.grid.surface_height(cell)
-			var bounds := AABB(center + Vector3(-half_tile, -0.1, -half_tile), Vector3(DungeonGrid.TILE_SIZE, top + 0.1, DungeonGrid.TILE_SIZE))
-			var intersection: Variant = bounds.intersects_ray(origin, direction)
-			if intersection == null:
-				continue
-			var hit: Vector3 = intersection
-			var distance_to_hit := origin.distance_squared_to(hit)
-			if distance_to_hit < nearest_distance:
-				nearest_distance = distance_to_hit
-				target = cell
-	return target
+	return KeeperCreatureTargeting.terrain_hit(context.grid, camera.project_ray_origin(screen), camera.project_ray_normal(screen)).cell
+
+
+func get_target_actor(screen: Vector2) -> CreatureState:
+	if context == null or camera == null or is_pointer_over_ui(screen):
+		return null
+	return KeeperCreatureTargeting.actor_at(context, camera, screen)
+
+
+func pickup_selected() -> bool:
+	if context == null:
+		return false
+	var actor := context.keeper.inspected_actor
+	if actor == null or actor.is_held:
+		return false
+	_cancel_drag()
+	return _creature_input.lift(actor.id)
+
+
+func inspect_hovered() -> bool:
+	var actor: CreatureState = get_target_actor(pointer_position)
+	if actor == null:
+		return false
+	_cancel_drag()
+	return _creature_input.inspect_actor(actor.id)
+
+
+func get_drop_preview() -> Dictionary:
+	if context == null:
+		return {"valid": false, "reason": "No dungeon is active", "cell": INVALID_CELL}
+	var over_ui := is_pointer_over_ui(pointer_position)
+	var cell := INVALID_CELL if over_ui else get_target_cell(pointer_position)
+	var quote := context.keeper.quote_drop(cell)
+	if over_ui and context.keeper.is_holding():
+		quote.reason = "Move off the interface to drop"
+	return quote
+
 
 
 func is_pointer_over_ui(screen: Vector2 = Vector2.INF) -> bool:
@@ -201,6 +247,8 @@ func is_constructing() -> bool:
 
 
 func set_build_room(definition_id: StringName) -> void:
+	if _reject_construction_while_held():
+		return
 	if context.registry == null:
 		return
 	var definition := context.registry.get_room(definition_id)
@@ -213,6 +261,8 @@ func set_build_room(definition_id: StringName) -> void:
 
 
 func set_sell_rooms() -> void:
+	if _reject_construction_while_held():
+		return
 	build_room_id = &""
 	removing_rooms = true
 	_cancel_drag()
@@ -244,15 +294,28 @@ func _construction_cells(first: Vector2i, last: Vector2i) -> Array[Vector2i]:
 func _update_pointer_preview(screen: Vector2) -> void:
 	pointer_position = screen
 	var cell := INVALID_CELL if is_pointer_over_ui(screen) else get_target_cell(screen)
-	if cell == context.hovered_cell and (_drag_start == INVALID_CELL or _drag_end == cell):
+	var actor: CreatureState = get_target_actor(screen) if not is_constructing() and not context.keeper.is_holding() else null
+	var actor_id := actor.id if actor != null else -1
+	if cell == context.hovered_cell and actor_id == _hovered_actor_id and (_drag_start == INVALID_CELL or _drag_end == cell) and not context.keeper.is_holding():
 		return
 	context.hovered_cell = cell
+	_hovered_actor_id = actor_id
 	_drag_end = cell
 	_refresh_preview()
 
 
 func _refresh_preview() -> void:
-	if context == null:
+	if context == null or _overlay == null:
+		return
+	if context.keeper.is_holding():
+		_refresh_drop_preview()
+		return
+	var gold_hover := context.grid.is_inside(context.hovered_cell) and context.grid.get_tile(context.hovered_cell) == DungeonGrid.Tile.FLOOR and context.economy.gold_at(context.hovered_cell) > 0
+	if not is_constructing() and ((_drag_start == INVALID_CELL and (_hovered_actor_id != -1 or gold_hover)) or (_creature_input != null and _creature_input.has_pending())):
+		var empty: Array[Vector2i] = []
+		_overlay.show_preview(empty, empty, empty)
+		_preview_changes = {"add": [], "remove": [], "blocked": [], "actor_id": _hovered_actor_id}
+		preview_changed.emit(get_preview_changes())
 		return
 	if is_constructing():
 		_refresh_construction_preview()
@@ -328,6 +391,7 @@ func _modifier_mode(event: InputEventWithModifiers) -> int:
 
 func _on_terrain_changed(_cell: Vector2i) -> void:
 	# A worker may change the hovered block without moving the pointer.
+	_update_pointer_preview(pointer_position)
 	_refresh_preview()
 
 
@@ -357,9 +421,59 @@ func _finish_drag(screen: Vector2) -> void:
 
 
 func _cancel_drag() -> void:
+	if _creature_input != null:
+		_creature_input.cancel()
 	_drag_start = INVALID_CELL
 	_drag_end = INVALID_CELL
 	_refresh_preview()
+
+
+func _refresh_drop_preview() -> void:
+	var quote := get_drop_preview()
+	var valid: Array[Vector2i] = []
+	var invalid: Array[Vector2i] = []
+	var removing: Array[Vector2i] = []
+	if context.grid.is_inside(quote.cell):
+		if quote.valid:
+			valid.append(quote.cell)
+		else:
+			invalid.append(quote.cell)
+	_overlay.show_construction_preview(valid, removing, invalid)
+	_preview_changes = {"add": [], "remove": [], "blocked": []}
+	if quote != _drop_preview:
+		_drop_preview = quote.duplicate(true)
+		drop_preview_changed.emit(quote.duplicate(true))
+
+
+func _reject_construction_while_held() -> bool:
+	if context == null or not context.keeper.is_holding():
+		return false
+	construction_changed.emit()
+	keeper_action_finished.emit({"success": false, "reason": "Empty your hand before building or selling"})
+	return true
+
+
+func _on_keeper_changed() -> void:
+	_drag_start = INVALID_CELL
+	_drag_end = INVALID_CELL
+	if _creature_input != null and not _creature_input.is_acting:
+		_creature_input.cancel()
+	if context.keeper.is_holding() and is_constructing():
+		build_room_id = &""
+		removing_rooms = false
+		construction_changed.emit()
+	_update_pointer_preview(pointer_position)
+	_refresh_preview()
+
+
+func _on_keeper_action_finished(result: Dictionary) -> void:
+	keeper_action_finished.emit(result)
+	_refresh_preview()
+
+
+func _on_simulation_ticked(_delta: float) -> void:
+	# Creature motion and occupancy may change under a stationary pointer.
+	_update_pointer_preview(pointer_position)
 
 
 func _process_keyboard(delta: float) -> void:

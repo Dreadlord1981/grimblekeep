@@ -74,6 +74,7 @@ func setup(context: GameContext) -> void:
 	for actor in _context.actors:
 		_add_actor(actor)
 	_context.actor_added.connect(_add_actor)
+	_context.keeper.actor_control_changed.connect(_on_actor_control_changed)
 	_context.grid.tile_changed.connect(_on_tile_changed)
 
 
@@ -92,6 +93,7 @@ func _process(delta: float) -> void:
 		if not _actor_views.has(actor.id):
 			continue
 		var view: Node3D = _actor_views[actor.id]
+		view.visible = not actor.is_held
 		if view.has_method("sync"):
 			view.call("sync", actor)
 		else:
@@ -125,10 +127,18 @@ func _add_actor(actor: CreatureState) -> void:
 	view.name = "Creature_%s" % actor.id
 	view.scale = Vector3.ONE * definition.scale_factor
 	view.position = actor.position
+	view.visible = not actor.is_held
 	_actor_root.add_child(view)
 	if view.has_method("setup_context"):
 		view.call("setup_context", _context)
 	_actor_views[actor.id] = view
+
+
+func _on_actor_control_changed(actor: CreatureState) -> void:
+	var view: Node3D = _actor_views.get(actor.id)
+	if view != null:
+		view.visible = not actor.is_held
+		view.position = actor.position
 
 
 func _build_lighting() -> void:
@@ -314,7 +324,7 @@ func _apply_terrain_changes() -> void:
 
 func _refresh_gold() -> void:
 	var economy := _context.economy
-	var snapshot := str([economy.ground_gold, economy.stored_by_cell, economy.treasury_cells])
+	var snapshot := str([economy.ground_gold, economy.stored_by_cell, economy.treasury_cells, economy.protected_storage])
 	if snapshot == _gold_snapshot:
 		return
 	_gold_snapshot = snapshot
@@ -323,6 +333,8 @@ func _refresh_gold() -> void:
 	for cell in economy.treasury_cells:
 		if not _context.grid.is_walkable(cell):
 			continue
+		if economy.protected_storage.has(cell):
+			_heart_storage_floor(cell)
 		var amount: int = economy.stored_by_cell.get(cell, 0)
 		if amount > 0:
 			_storage_prop(cell, amount)
@@ -336,6 +348,10 @@ func _storage_prop(cell: Vector2i, amount: int) -> void:
 	root.position = _context.grid.cell_to_world(cell) + Vector3.UP * 0.12
 	root.set_meta("gold", amount)
 	_gold_root.add_child(root)
+	if _context.economy.protected_storage.has(cell):
+		root.set_meta("stage", &"heart_pile")
+		_coin_pile(root.position, amount, root)
+		return
 	var definition := _context.registry.get_room(_context.rooms.tiles.get(cell, &""))
 	var small_ratio := definition.storage_small_chest_ratio if definition != null else 0.35
 	var large_ratio := definition.storage_large_chest_ratio if definition != null else 0.75
@@ -348,6 +364,26 @@ func _storage_prop(cell: Vector2i, amount: int) -> void:
 		var large := fullness >= large_ratio
 		root.set_meta("stage", &"large_chest" if large else &"small_chest")
 		_build_chest(root, large)
+
+
+func _heart_storage_floor(cell: Vector2i) -> void:
+	# Worn iron edging reserves this floor without hiding the chamber's stone
+	# or surrounding the Heart with tall Treasury chests.
+	var root := Node3D.new()
+	root.name = "HeartStorageFloor_%d_%d" % [cell.x, cell.y]
+	root.position = _context.grid.cell_to_world(cell)
+	root.set_meta("capacity", _context.economy.storage_capacity(cell))
+	_gold_root.add_child(root)
+	var iron := DungeonGeometry.material(Color("393638"))
+	var worn_brass := DungeonGeometry.material(Color("8a7143"))
+	for side in [-1, 1]:
+		DungeonGeometry.box(root, Vector3(1.86, 0.035, 0.065), Vector3(0, 0.035, side * 0.91), iron)
+		DungeonGeometry.box(root, Vector3(0.065, 0.035, 1.86), Vector3(side * 0.91, 0.035, 0), iron)
+		for corner in [-1, 1]:
+			DungeonGeometry.cylinder(root, 0.055, 0.022, Vector3(side * 0.87, 0.06, corner * 0.87), worn_brass, -1, 6)
+	DungeonGeometry.cylinder(root, 0.23, 0.014, Vector3(0, 0.015, 0), worn_brass, -1, 10)
+	DungeonGeometry.box(root, Vector3(0.075, 0.01, 0.29), Vector3(0, 0.025, 0), iron)
+	DungeonGeometry.box(root, Vector3(0.25, 0.01, 0.05), Vector3(0, 0.025, 0), iron)
 
 
 func _build_chest(root: Node3D, large: bool) -> void:

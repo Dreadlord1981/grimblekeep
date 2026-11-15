@@ -22,6 +22,9 @@ func _init(game_context: GameContext, board: WorkerJobBoard, creature: CreatureS
 
 
 func tick(delta: float, definition: CreatureDefinition) -> void:
+	if actor.is_held:
+		suspend()
+		return
 	var current_cell := _context.grid.world_to_cell(actor.position)
 	if _context.grid.is_walkable(current_cell):
 		last_safe_cell = current_cell
@@ -62,6 +65,16 @@ func cancel() -> void:
 	actor.target_cell = Vector2i(-1, -1)
 
 
+func suspend() -> void:
+	# Preserve the keeper-owned pose and cargo while invalidating every old job.
+	_board.release(actor.id)
+	job = null
+	_path_index = 0
+	_retry_in = 0.0
+	actor.work_progress = 0.0
+	actor.target_cell = Vector2i(-1, -1)
+
+
 func recover_removed_actor() -> bool:
 	# Called when this actor leaves the session. Retain it for a retry if every
 	# tile is blocked rather than silently destroying its cargo.
@@ -70,6 +83,8 @@ func recover_removed_actor() -> bool:
 
 
 func drop_cargo() -> bool:
+	if actor.is_held and actor in _context.actors:
+		return false
 	if actor.carried_gold <= 0:
 		return true
 	var cell := _nearest_safe_cell()
@@ -89,14 +104,14 @@ func _handle_idle(definition: CreatureDefinition) -> void:
 			for target in _context.excavation_marks:
 				if _context.grid.get_tile(target) in [DungeonGrid.Tile.GOLD, DungeonGrid.Tile.GEM]:
 					if not _board.has_reachable_treasury(_context.grid.world_to_cell(actor.position)):
-						actor.job_label = "Waiting for reachable Treasury space"
+						actor.job_label = "Waiting for reachable gold storage space"
 					break
 		return
 	var start := _context.grid.world_to_cell(actor.position)
 	if &"haul" not in definition.capabilities or not _board.has_reachable_treasury(start):
 		drop_cargo()
 	else:
-		actor.job_label = "Waiting for a treasury position"
+		actor.job_label = "Waiting for a gold storage position"
 
 
 func _job_is_valid(definition: CreatureDefinition) -> bool:
@@ -210,7 +225,7 @@ func _nearest_safe_cell() -> Vector2i:
 
 func _job_label() -> String:
 	if job.kind == &"deposit":
-		return "Delivering gold to treasury"
+		return "Delivering gold to storage"
 	if job.kind == &"haul":
 		return "Collecting dropped gold"
 	if job.terrain_kind == DungeonGrid.Tile.GOLD:

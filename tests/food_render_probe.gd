@@ -22,6 +22,7 @@ func _check(value: bool, description: String) -> void:
 func _run() -> void:
 	_app = (load("res://scenes/dungeon.tscn") as PackedScene).instantiate()
 	_app.set("starting_gold", 0)
+	_app.set("use_heart_storage", false)
 	root.add_child(_app)
 	_app.set_physics_process(false)
 	_context = _app.context
@@ -37,16 +38,16 @@ func _run() -> void:
 			break
 		mined += _context.economy.mine(cell, 200)
 	_check(_context.economy.deposit(Vector2i(16, 18), 500) and _context.economy.deposit(Vector2i(17, 18), 300), "Fixture funds are deposited finite seam gold")
-	_check(await _build_area(&"foundation.pig_pen", Vector2i(17, 14), Vector2i(19, 14)), "Viewport builds a minimum three-by-one Pig Pen")
+	_check(await _build_area(&"foundation.pig_pen", Vector2i(17, 14), Vector2i(18, 14)), "Viewport builds a minimum two-by-one Pig Pen")
 	_keeper.exit_construction()
 	_camera(Vector2i(18, 14), 12.0, -0.6, 0.8)
-	await _capture("pig-pen-minimum-3x1")
-	_check(_context.food.total_capacity == 1 and _context.food.total_units == 0, "A minimum three-tile strip supports one pig and starts empty")
-	_check(await _build_area(&"foundation.pig_pen", Vector2i(17, 15), Vector2i(19, 15)), "Viewport extends the same connected Pig Pen")
+	await _capture("pig-pen-minimum-2x1")
+	_check(_context.food.total_capacity == 1 and _context.food.total_units == 0, "A minimum two-tile strip supports one pig and starts empty")
+	_check(await _build_area(&"foundation.pig_pen", Vector2i(17, 14), Vector2i(19, 15)), "Viewport extends the same connected Pig Pen")
 	_keeper.exit_construction()
 	_camera(Vector2i(18, 14), 12.0, -0.6, 0.8)
 	await _capture("pig-pen-empty")
-	_check(_context.food.total_capacity == 2 and _context.food.total_units == 0, "Six connected tiles support two pigs, with no free initial stock")
+	_check(_context.food.total_capacity == 3 and _context.food.total_units == 0, "Six connected tiles support three pigs, with no free initial stock")
 	var boundaries := _app.find_children("PenBoundary_*", "Node3D", true, false)
 	var perimeter_only := not boundaries.is_empty()
 	var gates := 0
@@ -97,7 +98,7 @@ func _run() -> void:
 			await process_frame
 	_check(newborn and growing and adult, "The same stable food identity visibly grows from newborn through juvenile to adult over simulation time")
 	_check(visited.size() >= 3 and speed_safe and inside, "Pigs cross multiple connected pen tiles at bounded world speed while remaining inside")
-	_check(_context.food.total_units == 2 and _food_views().size() == 2, "Whole pen reaches its area-based capacity of two physical pigs")
+	_check(_context.food.total_units == 3 and _food_views().size() == 3, "Whole pen reaches its area-based capacity of three physical pigs")
 	_camera(Vector2i(18, 14), 11.0, -0.6, 0.8)
 	await _capture("pig-pen-full")
 	await _capture("cave-pigs-roaming-a")

@@ -47,14 +47,30 @@ static func _carve(grid: DungeonGrid, area: Rect2i) -> void:
 			grid.set_tile(Vector2i(x, y), DungeonGrid.Tile.FLOOR)
 
 
-static func setup_rooms(context: GameContext, starting_gold: int = 0) -> void:
+static func setup_rooms(context: GameContext, starting_gold: int = 0, heart_storage: bool = true) -> void:
 	# All open floor is immediately buildable; no separate claiming step.
 	# Fresh playtests receive a finite bank; zero preserves mining-only fixtures.
 	var treasury: Array[Vector2i] = [Vector2i(16, 18), Vector2i(17, 18), Vector2i(16, 19), Vector2i(17, 19)]
-	if starting_gold > 2000:
-		treasury.append_array([Vector2i(18, 18), Vector2i(18, 19)])
-	var placed := context.rooms.place_initial(&"foundation.treasury", treasury)
-	assert(placed, "Starting treasury must fit open floor")
+	if heart_storage:
+		treasury.clear()
+		var capacities: Dictionary[Vector2i, int] = {}
+		var hearts := context.grid.cells_of_type(DungeonGrid.Tile.HEART)
+		assert(not hearts.is_empty(), "Heart storage requires a Dungeon Heart")
+		for y in range(-1, 2):
+			for x in range(-1, 2):
+				if x == 0 and y == 0:
+					continue
+				var cell: Vector2i = hearts[0] + Vector2i(x, y)
+				treasury.append(cell)
+				capacities[cell] = 500
+		var configured := context.economy.configure_protected_storage(capacities)
+		assert(configured, "Protected Heart storage must fit open floor")
+	else:
+		# Explicit legacy fixture; the actual dungeon starts without a Treasury.
+		if starting_gold > 2000:
+			treasury.append_array([Vector2i(18, 18), Vector2i(18, 19)])
+		var placed := context.rooms.place_initial(&"foundation.treasury", treasury)
+		assert(placed, "Starting treasury must fit open floor")
 	assert(starting_gold >= 0 and starting_gold <= context.economy.treasury_capacity, "Starting gold must fit the scenario Treasury")
 	var remaining := starting_gold
 	for cell in treasury:

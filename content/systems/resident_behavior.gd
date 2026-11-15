@@ -35,6 +35,8 @@ func _init(game_context: GameContext, creature: CreatureState) -> void:
 
 
 func tick(delta: float, definition: CreatureDefinition) -> void:
+	if actor.is_held:
+		return
 	_bed_retry_in -= delta
 	_explore_in -= delta
 	_feeding.update_need(delta, definition)

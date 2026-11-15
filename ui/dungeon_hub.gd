@@ -51,6 +51,7 @@ func setup(context: GameContext) -> void:
 		for definition in context.registry.get_creatures():
 			var button := _button(definition.portrait if definition.portrait != null else DefaultPortrait)
 			_creatures.add_child(button)
+			button.pressed.connect(_inspect_next_species.bind(definition.id))
 			creature_buttons[definition.id] = button
 			creature_badges[definition.id] = _badge(button)
 		for definition in context.registry.get_rooms():
@@ -108,7 +109,7 @@ func refresh() -> void:
 				count += 1
 		creature_badges[id].text = str(count)
 		var definition := _context.registry.get_creature(id)
-		creature_buttons[id].tooltip_text = "%s\nPopulation %d\nF3: individual actions and needs" % [definition.display_name, count]
+		creature_buttons[id].tooltip_text = "%s\nPopulation %d\nClick to inspect; click again to cycle individuals." % [definition.display_name, count]
 	for id in room_buttons:
 		var count := 0
 		var tiles := 0
@@ -165,6 +166,19 @@ func refresh() -> void:
 
 func _on_actor_changed(_actor: CreatureState) -> void:
 	refresh()
+
+
+func _inspect_next_species(definition_id: StringName) -> void:
+	var members: Array[CreatureState] = []
+	for actor in _context.actors:
+		if actor.definition_id == definition_id:
+			members.append(actor)
+	if members.is_empty():
+		return
+	members.sort_custom(func(a: CreatureState, b: CreatureState) -> bool: return a.id < b.id)
+	var selected: CreatureState = _context.keeper.inspected_actor
+	var index := members.find(selected)
+	_context.keeper.inspect(members[(index + 1) % members.size()].id)
 
 
 func _button(texture: Texture2D, width: float = 80, icon_size: float = 56, cost: int = -1) -> Button:

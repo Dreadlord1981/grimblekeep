@@ -103,7 +103,7 @@ func _test_natural_full_storage(kind: int) -> void:
 	_check(extracted == 60 and _extracted(scene) == extracted, "Full Treasury stops further finite/gem extraction")
 	_check(context.excavation_marks.has(TARGET) and context.grid.get_tile(TARGET) == kind, "Storage pause preserves the mineral terrain and its mining order")
 	_check(scene.feature.job_board.active_job_count() == 0 and context.actors[0].carried_gold == 0, "Full-storage miners release reservations and stop collecting cargo")
-	_check("Treasury space" in context.actors[0].job_label, "Paused miner explains that reachable Treasury space is needed")
+	_check("gold storage space" in context.actors[0].job_label, "Paused miner explains that reachable gold storage space is needed")
 	_finish(scene, "Natural finite/gem storage fill")
 
 

@@ -165,9 +165,6 @@ func _bed_lift(actor: CreatureState) -> float:
 	var bed := _context.beds.get_bed(actor.id)
 	if bed == null or not bed.established:
 		return 0.0
-	var offset := actor.position - bed.center(_context.grid)
-	var x_fraction := absf(offset.x) / (float(bed.size.x) * DungeonGrid.TILE_SIZE * 0.5)
-	var z_fraction := absf(offset.z) / (float(bed.size.y) * DungeonGrid.TILE_SIZE * 0.5)
 	# Feet rest on the mattress until its edge, then lower by actual distance.
 	# Selling the reservation removes the lift immediately, even when stationary.
-	return 0.48 * clampf((1.0 - maxf(x_fraction, z_fraction)) / 0.25, 0.0, 1.0)
+	return bed.lift_at(_context.grid, actor.position)

@@ -49,7 +49,7 @@ func can_place(anchor: Vector2i, footprint: Vector2i, room_tag: StringName) -> b
 
 
 func reserve(actor: CreatureState, definition: CreatureDefinition) -> BedState:
-	if actor == null or definition == null or actor.id <= 0 or actor.definition_id != definition.id or &"rest" not in definition.capabilities:
+	if actor == null or actor.is_held or definition == null or actor.id <= 0 or actor.definition_id != definition.id or &"rest" not in definition.capabilities:
 		return null
 	var start := _grid.world_to_cell(actor.position)
 	var existing := get_bed(actor.id)
@@ -76,7 +76,7 @@ func reserve(actor: CreatureState, definition: CreatureDefinition) -> BedState:
 
 
 func establish(actor: CreatureState) -> bool:
-	if actor == null or not actor.position.is_finite():
+	if actor == null or actor.is_held or not actor.position.is_finite():
 		return false
 	var bed := get_bed(actor.id)
 	var definition := _registry.get_creature(actor.definition_id) if _registry != null else null

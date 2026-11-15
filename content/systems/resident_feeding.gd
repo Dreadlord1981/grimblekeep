@@ -29,6 +29,8 @@ func _init(context: GameContext, actor: CreatureState) -> void:
 
 
 func update_need(delta: float, definition: CreatureDefinition) -> void:
+	if _actor.is_held:
+		return
 	_retry_in -= delta
 	if &"eat" not in definition.capabilities:
 		cancel()
@@ -46,6 +48,8 @@ func is_critical(definition: CreatureDefinition) -> bool:
 
 
 func try_begin() -> bool:
+	if _actor.is_held:
+		return false
 	if _engaged:
 		return true
 	if not _hungry or _retry_in > 0.0:
@@ -54,6 +58,8 @@ func try_begin() -> bool:
 
 
 func tick(delta: float, definition: CreatureDefinition) -> void:
+	if _actor.is_held:
+		return
 	if _reservation == null and not _reserve_meal():
 		return
 	if not _context.food.is_valid(_reservation):

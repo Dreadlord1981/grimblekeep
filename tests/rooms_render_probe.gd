@@ -11,6 +11,7 @@ func _initialize() -> void:
 func _run() -> void:
 	var app := (load("res://scenes/dungeon.tscn") as PackedScene).instantiate()
 	app.starting_gold = 0
+	app.use_heart_storage = false
 	root.add_child(app)
 	app.set_physics_process(false)
 	var context: GameContext = app.context

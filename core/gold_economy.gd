@@ -11,6 +11,9 @@ var treasury_cells: Array[Vector2i] = []
 var stored_by_cell: Dictionary[Vector2i, int] = {}
 var spent_gold: int = 0
 var refunded_gold: int = 0
+## Keeper custody is physical gold, excluded from spendable storage.
+var keeper_gold: int = 0
+var protected_storage: Dictionary[Vector2i, int] = {}
 var stored_gold: int:
 	get:
 		var total := 0
@@ -31,6 +34,7 @@ var pending_cargo: Dictionary[int, CreatureState] = {}
 var _grid: DungeonGrid
 var _room_storage := false
 var _storage_limits: Dictionary[Vector2i, int] = {}
+var _room_capacities: Dictionary[Vector2i, int] = {}
 
 
 func _init(grid: DungeonGrid = null) -> void:
@@ -93,11 +97,30 @@ func available_storage(cell: Vector2i) -> int:
 
 
 func configure_treasury(capacities: Dictionary[Vector2i, int]) -> void:
+	_room_capacities = capacities.duplicate()
+	_refresh_storage()
+
+
+func configure_protected_storage(capacities: Dictionary[Vector2i, int]) -> bool:
+	if _grid == null:
+		return false
+	for cell in capacities:
+		if capacities[cell] <= 0 or not _grid.is_inside(cell) or _grid.get_tile(cell) != DungeonGrid.Tile.FLOOR:
+			return false
+	protected_storage = capacities.duplicate()
+	_refresh_storage()
+	return true
+
+
+func _refresh_storage() -> void:
 	# Room state supplies physical cell capacities. Removed/overflow stock stays
 	# where it was as recoverable loose gold, never silently moved or destroyed.
 	_room_storage = true
 	_storage_limits.clear()
 	treasury_cells.clear()
+	var capacities: Dictionary[Vector2i, int] = _room_capacities.duplicate()
+	for cell in protected_storage:
+		capacities[cell] = maxi(capacities.get(cell, 0), protected_storage[cell])
 	for cell in capacities:
 		if capacities[cell] > 0 and _grid.get_tile(cell) == DungeonGrid.Tile.FLOOR:
 			_storage_limits[cell] = capacities[cell]
@@ -110,6 +133,43 @@ func configure_treasury(capacities: Dictionary[Vector2i, int]) -> void:
 		if stored_by_cell[cell] == 0:
 			stored_by_cell.erase(cell)
 	changed.emit()
+
+
+func gold_at(cell: Vector2i) -> int:
+	if _grid == null or _grid.get_tile(cell) != DungeonGrid.Tile.FLOOR:
+		return 0
+	# The visible loose pile takes precedence over stock beneath it.
+	return ground_gold.get(cell, 0) if ground_gold.get(cell, 0) > 0 else stored_by_cell.get(cell, 0)
+
+
+func pickup_for_keeper(cell: Vector2i, amount: int = -1) -> int:
+	if amount == 0 or amount < -1:
+		return 0
+	var available := gold_at(cell)
+	var taken := available if amount == -1 else mini(available, amount)
+	if taken <= 0:
+		return 0
+	var balances: Dictionary[Vector2i, int] = ground_gold if ground_gold.get(cell, 0) > 0 else stored_by_cell
+	balances[cell] -= taken
+	if balances[cell] == 0:
+		balances.erase(cell)
+	keeper_gold += taken
+	changed.emit()
+	return taken
+
+
+func drop_from_keeper(cell: Vector2i, requested: int = -1) -> int:
+	if keeper_gold <= 0 or requested == 0 or requested < -1 or _grid == null or _grid.get_tile(cell) != DungeonGrid.Tile.FLOOR:
+		return 0
+	var amount := keeper_gold if requested == -1 else mini(keeper_gold, requested)
+	var deposited := mini(amount, available_storage(cell))
+	if deposited > 0:
+		stored_by_cell[cell] = stored_by_cell.get(cell, 0) + deposited
+	if amount > deposited:
+		ground_gold[cell] = ground_gold.get(cell, 0) + amount - deposited
+	keeper_gold -= amount
+	changed.emit()
+	return amount
 
 
 func deposit(cell: Vector2i, amount: int) -> bool:
@@ -163,7 +223,7 @@ func refund(cell: Vector2i, amount: int) -> void:
 
 func accounted_gold(actors: Array[CreatureState]) -> int:
 	# physical + construction spent = finite supply + gem output + sale refunds
-	var total := stored_gold + spent_gold - refunded_gold
+	var total := stored_gold + keeper_gold + spent_gold - refunded_gold
 	for amount in remaining_gold.values():
 		total += amount
 	for amount in ground_gold.values():
@@ -204,4 +264,7 @@ func _on_tile_changed(cell: Vector2i) -> void:
 		# If another system removes a seam, preserve its gold as a loose floor pile.
 		if remaining > 0:
 			ground_gold[cell] = ground_gold.get(cell, 0) + remaining
-	changed.emit()
+	if _room_storage and (_room_capacities.has(cell) or protected_storage.has(cell)):
+		_refresh_storage()
+	else:
+		changed.emit()
