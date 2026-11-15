@@ -1,0 +1,232 @@
+# Grimblekeep — shared development checklist
+
+Status: planning only. Game implementation has not been authorized yet.
+Updated: 2026-11-12
+
+## How to use this plan
+
+- Read this file and `AGENTS.md` before starting work.
+- Work toward the current milestone. Keep the game playable as systems are added.
+- Use `[ ]` for pending work and `[x]` only for work verified against its acceptance criteria.
+- Record an active assignment below before parallel work begins. Give each assignment clear ownership, interfaces and a reviewer.
+- Update this plan after accepted work. Record what was tested, remaining problems and the next action in the handoff.
+- Keep new feature ideas in the backlog; do not silently expand the milestone.
+
+## Agreed vision
+
+- Original Dungeon Keeper-inspired real-time dungeon management game for desktop PC.
+- Godot and GDScript; no Rust requirement.
+- True perspective 3D, with camera rotation, pan and zoom. An elevated management view and closer inspection must both work.
+- Fun, expressive creatures; gritty stone, worn materials, torchlight and eerie magic; dark, twisted humor.
+- Begin with coherent retro 1990s-style low-poly graphics, small textures and simple animations. Upgrade presentation later.
+- Restrained mouse-and-keyboard HUD with readable information and shortcuts.
+- An animated keeper hand is the primary world cursor: it points out excavation targets and lets the player pick up and drop creatures to guide them. Give it an original design matching Grimblekeep's gritty cartoon style.
+- Core loop: excavate, claim land, mine gold, build rooms, attract creatures through portals, meet their needs and expand.
+- The Dungeon Heart anchors the keeper's presence and forms the dungeon's central landmark. Begin with its chamber, a few worker imps and nearby mineable gold.
+- Keep the Heart separate from the portal: the Heart sustains the dungeon; the portal admits creatures. The Heart does not generate free gold or food.
+- Heart art direction: an exaggerated beating heart suspended in rusty chains above a stone basin, surrounded by candles and pipes. Use gritty cartoon materials and dark humor, such as an imp mopping up an unpleasant leak.
+- In the pet dungeon, the Heart provides atmosphere through its pulse, animation and sound. Later, it reacts urgently to threats and its destruction becomes the defeat condition when combat is introduced.
+- Initial economic resources: gold and food. Gold is mined and hauled into a treasury; food exists in a producing room and is eaten by creatures.
+- Stone is excavated terrain. Wood may appear in props. Neither is an inventory currency.
+- No idle/mobile economy, premium currencies, reward popups, waiting timers or time acceleration controls. An ordinary pause/menu is fine.
+- Creature arrival and production may use internal simulation timing; these are world behaviors, not player-facing countdowns.
+
+## First playable scope: the pet dungeon
+
+One small sandbox dungeon containing a central Dungeon Heart chamber, worker imps, two resident creature species, one separate portal, a treasury, a lair and a food room. Workers excavate and haul gold. Residents arrive when room requirements are met, explore, eat and sleep. The player can inspect creatures, guide them with the keeper hand and save/load the dungeon. The Heart beats and establishes atmosphere; attack, destruction and defeat mechanics wait until the combat milestone.
+
+Combat, invading heroes, research, spells, traps, campaigns, multiplayer and elaborate manufacturing chains are outside this first scope.
+
+## Work and review flow
+
+1. Lead defines a small work package: objective, owned files, interfaces, acceptance criteria and verification method.
+2. Implementer completes the package and runs relevant checks.
+3. A different agent reviews behavior, code or assets against the package and this vision. Findings have severity and concrete evidence.
+4. Implementer resolves findings; reviewer verifies material fixes.
+5. Lead integrates the result, checks the playable scenario and updates this checklist with evidence.
+
+Use available agent slots for focused engineering, review and art tasks as needed. Do not require every role to run simultaneously. Avoid concurrent edits to the same files; agree on shared interfaces before parallel implementation. Agent approval is supporting evidence, not a replacement for running the game.
+
+## AI development loops — required once implementation starts
+
+These loops turn the vision into observable acceptance checks. They reduce errors and drift; they cannot guarantee fun, flawless art or a commercial-quality game. Game implementation still requires the user's go-ahead. No background automation or additional service is enabled by this document.
+
+### A. Work-package loop: define, build, verify, review, repair
+
+1. Read the current milestone, relevant code, existing changes and latest handoff. Establish the starting behavior before changing it.
+2. Define one small package using the template below. Identify dependencies and agree on interfaces before parallel work.
+3. Implement the smallest complete behavior. Use placeholders where the milestone permits them.
+4. Run focused tests and the relevant playable scenario. Inspect actual outputs; collect failures and enough evidence to reproduce them.
+5. Have a different agent review the changes against the package, failure cases and agreed vision. Give the reviewer the requirements and evidence, not just the implementer's explanation.
+6. Fix findings, rerun affected checks and have material fixes reviewed again. Return to implementation only for a concrete failure or unmet acceptance criterion.
+7. Integrate only after the package gate passes. Record the result and evidence before marking its checklist item complete.
+
+Package template:
+
+- ID / milestone / objective:
+- Implementer / independent reviewer / owned files:
+- Dependencies / agreed interfaces:
+- Acceptance checks: observable behavior, relevant failure cases and expected outcomes.
+- Verification: commands, scenario, seed where useful, visual checks and performance limits where applicable.
+- Effort boundary: small deliverable and repair/inspection budget agreed by the lead before starting.
+- Evidence: tested revision or file state, command exit/results, scenario observations and artifact paths.
+- Findings / fixes / remaining limits:
+- Status: pending, active, in review, needs repair, accepted, or blocked with a concrete reason.
+
+### B. Gameplay loop: prove the dungeon behaves correctly
+
+- Start with a small reproducible scene; exercise the normal path and the highest-risk interruptions.
+- Add meaningful regression checks for discovered bugs. Do not merely restate the implementation in a test.
+- Use headless tests for rules and simulation, and graphical runs for targeting, controls and visual behavior.
+- Inspect real player inputs as well as scripted scenarios. Internal API calls alone do not prove that a player can perform an action.
+- Once focused checks pass, verify affected integrations. Broaden testing when a dependency, failure or unresolved risk warrants it.
+
+Required scenarios as their systems become available:
+
+| Scenario | Observable acceptance evidence |
+| --- | --- |
+| Starting dungeon | One central Heart chamber, a separate portal, workers and accessible gold; correct perspective camera and readable selection. |
+| Dig, mine and build | Player marks terrain with the hand; workers excavate and haul; treasury receives deposits; construction spends exactly the intended stored gold. |
+| Interrupt a worker | Pick up a carrying worker, block a route or remove a target; no duplicated/lost gold, stuck job or leaked reservation. Record any deliberately dropped cargo as world state. |
+| Room attraction | A species stays ineligible until its room/capacity rules are met; eligible arrivals use the connected portal and do not exceed capacity. |
+| Living residents | Observe repeated eating/sleeping cycles, competition for beds/food and recovery from target removal; needs and task displays agree with behavior. |
+| Keeper hand | Hover, mark/cancel, pick up and valid/invalid drop work across camera views; UI clicks do not trigger world actions. |
+| Save and resume | Save during active work and while a creature is held; loading preserves the Heart, ownership, resources and needs and restores sensible activity. |
+| Extended operation | Seeded simulation and a graphical session show no accumulating errors, permanently stuck actors or unbounded growth; record population, map size and elapsed simulation time. |
+
+For gold, account explicitly for unmined, carried, dropped, stored and spent amounts against the initial total. For food, account for production and consumption. The Heart and portal create no free economic resources. Verify these properties across interruption and save/load scenarios.
+
+### C. Asset loop: brief, create, import, inspect, revise
+
+1. Brief the asset against the agreed style, camera distance, world scale, silhouette, animation needs and technical budget. Reference approved visuals; generated screenshots are targets, not proof of attainable runtime quality.
+2. Produce a small representative sample before expanding a creature family or room kit. Record provenance and import settings.
+3. Import the asset into Godot and inspect it alongside existing content under actual dungeon lighting, at overview and close camera distances.
+4. A different agent reviews shape, palette, material wear, scale, pivots, clipping, animation, readability and technical cost. Use rendered frames and motion evidence for animated assets; inspect sound in playback when audio tools permit.
+5. Revise specific failures and recheck them. Accept only when the asset serves its gameplay role and fits the current milestone's fidelity.
+
+Preserve the expressive gritty cartoon direction, even with retro graphics. Do not approve attractive isolated renders that become unreadable in play. Do not claim animation or audio was reviewed if the available tools could not inspect it; record the missing check.
+
+### D. Integration and milestone loop: prove the complete experience
+
+1. Lead integrates reviewed packages in dependency order and runs the milestone scenario through real game controls.
+2. Inspect the current rendered game against the vision: perspective depth, readable rooms/creatures, restrained desktop HUD, physical gold/food, keeper hand and distinct Heart/portal.
+3. Check relevant performance on a recorded machine and workload; record measurements rather than inferred speed. Define numerical budgets before claiming a performance gate has passed.
+4. Classify defects and send actionable failures back to the responsible package loop. Preserve repro steps and evidence.
+5. Accept the milestone only when its listed checks pass. For the final vertical slice, verify the exported Windows build as well as the editor run.
+
+Blocking findings include crashes, data loss, duplicated resources/creatures, broken core progression, unusable controls, or material departures from the agreed vision. Minor polish findings may remain explicitly tracked if they do not prevent the milestone goal. Never weaken acceptance checks or move required work to the backlog just to declare completion.
+
+### Repair limits, continuity and escalation
+
+- After three unsuccessful repairs of the same issue, stop repeating the patch. Reproduce it in isolation, re-examine the design and obtain a fresh reviewer diagnosis before further changes.
+- Work within the package effort boundary. If it is exceeded, record evidence and replan the smallest in-scope deliverable; leave the package incomplete if required checks remain unmet.
+- Resolve routine implementation decisions autonomously within the agreed scope. Request user direction only when a missing choice, new authority or scope change prevents safe progress.
+- A reviewer finding must identify a violated requirement, observable defect or concrete maintenance risk. Avoid endless subjective polishing once the agreed fidelity is met.
+- At session or agent handoff, record current package, file/revision state, passed/failed checks, evidence locations, outstanding findings and the next executable action. Resume from this record.
+- Keep test acceleration inside test tooling; it does not authorize player-facing speed controls. Creature AI remains local gameplay logic; these development loops introduce no runtime LLM dependency.
+
+## Milestones and acceptance gates
+
+### 0. Planning and tooling — current milestone
+
+- [x] Record vision, scope, milestones and review workflow.
+- [x] Document AI development loops, package/evidence requirements, repair limits and milestone acceptance rules.
+- [ ] Verify installed Godot executable and usable local test commands from this project directory.
+- [ ] Confirm export templates and graphics-capable test execution.
+- [ ] Establish art budgets, camera scale and a small set of visual references before asset production.
+- [ ] Obtain the user's go-ahead to begin game implementation.
+
+Gate: agreed scope, working toolchain and explicit implementation authorization.
+
+### 1. Playable foundation
+
+- [ ] Create the Godot project, folder conventions and reproducible launch/check commands.
+- [ ] Build a small grid-based 3D dungeon with solid rock and open floor.
+- [ ] Establish the starting Heart chamber with a placeholder pulsing Dungeon Heart, a few workers and nearby gold; leave an accessible route for expansion.
+- [ ] Implement perspective camera pan, rotation, zoom and floor selection.
+- [ ] Add a placeholder keeper hand cursor with clear hover/pointing feedback on world targets; UI interaction must not trigger world actions.
+- [ ] Show an animated placeholder creature at correct world scale.
+- [ ] Add a diagnostic scene and basic error logging.
+
+Gate: project launches without script errors; camera and selection work at different angles and zoom levels; the Heart reads as the central landmark and is visually distinct from the portal; a rendered capture has been inspected.
+
+### 2. Workers and construction
+
+- [ ] Mark accessible rock for excavation; workers reach it and dig.
+- [ ] Use the keeper hand to mark/cancel excavation targets, with distinct valid, selected and blocked feedback at different camera angles.
+- [ ] Claim excavated floor and update walkability.
+- [ ] Mine finite gold seams and haul carried gold into treasury storage.
+- [ ] Build/remove room tiles with clear selection, validity and cost feedback.
+- [ ] Recognize connected rooms and handle merging/splitting and capacity changes.
+- [ ] Handle unreachable jobs, blocked routes and interrupted work without stuck workers or duplicate rewards.
+
+Gate: a scripted scenario excavates a route, deposits gold and constructs a room; checks cover room changes, spending and job ownership.
+
+### 3. Living pet dungeon
+
+- [ ] Define rooms and species through data with explicit attraction requirements.
+- [ ] Spawn residents through a connected portal only when requirements and capacity allow.
+- [ ] Implement hunger, energy, mood and autonomous action choice.
+- [ ] Reserve beds and food targets; release reservations when actions fail or targets disappear.
+- [ ] Provide working food production, eating and sleeping behaviors.
+- [ ] Add two species with distinguishable silhouettes, preferences and behavior.
+- [ ] Inspect/name residents and display their current action and needs.
+- [ ] Pick up eligible friendly creatures with the keeper hand and drop them on valid accessible dungeon floor; invalid drops keep them held and show why.
+- [ ] Suspend movement/jobs while held, release stale reservations and resume sensible behavior after dropping; prevent duplicate creatures and recover safely if a held creature is removed or the game is saved/loaded.
+
+Gate: expanding the dungeon changes which species can arrive; residents repeatedly satisfy needs without starvation loops, reservation leaks or becoming stuck. Keeper-hand pickup/drop works across camera views, respects placement rules and leaves creature/job state consistent.
+
+### 4. Persistence and robustness
+
+- [ ] Save/load terrain, rooms, stored/carried gold, food, creatures and needs.
+- [ ] Preserve the Heart's location and its chamber through save/load without duplicating or losing the central landmark.
+- [ ] Version the save format and handle invalid saves without overwriting a valid save.
+- [ ] Verify a save round trip and resumption of sensible jobs after loading.
+- [ ] Run a seeded extended simulation covering excavation, arrival, eating and sleeping.
+- [ ] Measure frame time and simulation time against a recorded reference machine, map size and population.
+
+Gate: test results and measured performance are recorded; no unresolved critical progression or data-loss defects.
+
+### 5. Cohesive retro vertical slice
+
+- [ ] Replace placeholders with consistent low-poly creatures, modular rooms and props.
+- [ ] Add readable animation, lighting, sound and interaction feedback.
+- [ ] Give the Dungeon Heart a distinctive pulse, restrained sound and gritty cartoon chamber dressing; verify its readability from overview and close inspection views.
+- [ ] Polish keeper hand idle, pointing, grabbing and release animations; verify target visibility, cursor responsiveness and readable feedback at gameplay scale.
+- [ ] Review assets together at actual gameplay distance and during movement.
+- [ ] Polish desktop HUD, shortcuts, camera occlusion and a short introduction.
+- [ ] Export a Windows build and run the exported build through the complete pet-dungeon scenario.
+- [ ] Complete independent code and visual reviews, fix release-blocking findings and record known issues.
+
+Gate: exported build supports the complete loop with cohesive presentation, reliable saves and recorded test evidence. This is a vertical slice, not a claim of commercial release readiness.
+
+## Quality rules
+
+- Keep simulation state separate from rendering; assets should be replaceable without rewriting game rules.
+- Maintain one clear source of truth for ownership, gold, needs, capacity and reservations.
+- Prefer simple systems with explicit responsibilities. Profile before introducing complex optimizations.
+- Use tests for consequential rules and failure cases; inspect rendered output for visual correctness. Headless success alone does not verify graphics or controls.
+- Assets must pass silhouette, scale, palette, texture, animation and import checks. Record their source/license or generation provenance.
+- Reject visible generation artifacts, unreadable creatures, inconsistent materials and mobile-style interface elements.
+- Report observed results honestly. Separate measured performance and tested behavior from estimates and untested assumptions.
+
+## Active assignments
+
+None. Implementation is pending authorization.
+
+For each future package record: ID, objective, implementer, reviewer, owned files, dependencies, acceptance checks and status.
+
+## Latest handoff
+
+- Completed: shared plan and agent entry instructions; keeper hand and Dungeon Heart included in scope. Added required gameplay, asset, independent review and integration loops with evidence, acceptance and repair rules. Heart defense and destruction remain future combat work. Implementation remains pending authorization.
+- Verification: documentation checked against the agreed conversation scope; no game tests apply yet.
+- Known limits: toolchain/export/graphical testing has not been verified from this directory; generated concepts are visual references, not usable 3D game assets.
+- Next action: after implementation authorization, verify tooling and establish the first foundation work packages.
+
+## Later backlog
+
+- Training, research, traps, doors, spells and creature progression.
+- Combat, invading heroes, defenses and campaign objectives.
+- Dungeon Heart threat reactions, attack/damage behavior and destruction as the defeat condition; introduce and test these alongside combat.
+- Richer creature relationships, humor and room interactions.
+- Improved models, textures, animation, accessibility, audio and wider playtesting.
