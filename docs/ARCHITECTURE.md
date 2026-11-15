@@ -7,6 +7,7 @@ presentation/input/UI nodes. Keep orchestration here; gameplay rules live elsewh
 | Area | Owns | May depend on |
 | --- | --- | --- |
 | `core/` | Grid, runtime state, definition schemas, registry and feature contract | Godot data types/resources; no presentation or input |
+| `persistence/` | Versioned JSON codecs, validation and safe disk replacement | Core contracts; no views/input or arbitrary resource loading |
 | `content/` | Manifests, definitions, starting scenario and optional mechanics | Core contracts |
 | `presentation/` | Terrain, props, creatures, lighting, animation | Read session state and definitions |
 | `interaction/` | Perspective camera, ray targeting, keeper hand and input | Core; sends explicit selection/commands |
@@ -385,9 +386,43 @@ queue membership and the physical balance agree after every completed command.
 represents every entry while only visible cards and a small overscan are created.
 Scrolling and card inspection never reorder the queue. A pinned count/next-item
 summary remains visible when scrolling to later entries. This rendering bound
-does not limit gameplay capacity. No save/load implementation is introduced:
-later persistence must capture the full ordered queue, names, origins, gold and
-safe resumption alongside the rest of the session.
+does not limit gameplay capacity. Persistence captures the complete queue rather
+than the visible cards, preserving entry IDs, origins, actor references by stable
+ID and per-batch gold. Restored actor references point only into the new session.
+
+## Save/load boundaries
+
+`DungeonSave.capture(context)` creates JSON-compatible data; `restore(data, registry)`
+returns a detached validated context or an error. The versioned facade delegates
+to world/gold, creature/bed/keeper and food codecs. Definitions resolve through the
+already registered stable IDs, never through save-supplied script/resource paths.
+Room groups and storage capacity rebuild from terrain/definitions; physical
+stock, accounting counters and monotonic identity sequences restore explicitly.
+Corrupt references, duplicate identities, invalid numbers and unbalanced resource
+ledgers reject the candidate. Pending beds stay pending; established beds preserve
+ownership. Removed actors' pending cargo and food on sold/blocked tiles stay accounted.
+
+`GameFeature.persistence_id()`, `capture_state()` and `restore_state(data)` let a
+stateful mechanic extend the feature payload without changing the core codecs.
+Use a namespaced stable ID and validate before committing local state. Stateless
+features return an empty ID/payload. `FeaturePersistence` rejects missing, duplicate
+or unavailable stateful features; the resident module preserves its arrival clock.
+Add meaningful round-trip/continuation checks when adding persistent mechanics.
+
+`app/dungeon_app.gd` prepares features against a detached candidate, checks the
+optional camera state and replaces live features/views/input/HUD only after every
+owner accepts. GUI requests defer replacement until the emitting control returns.
+Transient gestures/tools/routes/jobs/meal reservations start clean; creatures replan
+with their saved needs, rest/hunger intent, cargo and bed ownership. Sleeping recovery
+continues through the hysteresis band. Held creatures remain frozen until dropped.
+
+`DungeonSaveStore` writes verified JSON to an adjacent temporary file before slot
+replacement and retains a `.bak`; failed operations report errors without discarding
+the last good data. A missing primary can load the backup after an interrupted
+replacement. This does not promise filesystem durability under hardware/power loss.
+The app passes the registry for full preflight, including validation after exact JSON
+encoding. There is one manual `user://saves/dungeon.json` slot, no autosave or migration
+from future versions. Camera state is presentation data and has its own validator.
 
 ## Room art and desktop icon controls
 

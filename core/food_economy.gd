@@ -32,6 +32,14 @@ var _rooms: DungeonRooms
 var _registry: ContentRegistry
 
 
+func next_unit_id() -> int:
+	return _next_unit_id
+
+
+func restore_unit_sequence(next_id: int) -> void:
+	_next_unit_id = next_id
+
+
 func _init(grid: DungeonGrid, rooms: DungeonRooms, registry: ContentRegistry) -> void:
 	_grid = grid
 	_rooms = rooms

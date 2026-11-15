@@ -6,6 +6,22 @@ var behaviors: Dictionary[int, ResidentBehavior] = {}
 var _arrival_in := 0.0
 
 
+func persistence_id() -> StringName:
+	return &"foundation.residents"
+
+
+func capture_state() -> Dictionary:
+	return {"arrival_in": _arrival_in}
+
+
+func restore_state(data: Dictionary) -> String:
+	var remaining: Variant = data.get("arrival_in")
+	if not (remaining is float or remaining is int) or not is_finite(float(remaining)) or float(remaining) < 0.0 or float(remaining) > ARRIVAL_POLL_SECONDS:
+		return "Invalid resident arrival clock"
+	_arrival_in = float(remaining)
+	return ""
+
+
 func setup(game_context: GameContext) -> void:
 	if context != null and context.keeper.actor_control_changed.is_connected(_on_actor_control_changed):
 		context.keeper.actor_control_changed.disconnect(_on_actor_control_changed)

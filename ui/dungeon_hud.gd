@@ -2,6 +2,9 @@ class_name DungeonHUD
 extends CanvasLayer
 ## Desktop HUD observes authoritative economy and worker state; never assigns jobs.
 
+signal save_requested
+signal load_requested
+
 const HandScript = preload("res://ui/keeper_hand.gd")
 const INK := Color(0.82, 0.78, 0.67)
 const MUTED := Color(0.50, 0.53, 0.51)
@@ -50,6 +53,11 @@ var _inspector: CreatureInspector
 var _footer_panel: PanelContainer
 var _footer_content: VBoxContainer
 var _keeper_queue: KeeperQueue
+var _save_panel: PanelContainer
+var _save_button: Button
+var _load_button: Button
+var _save_status: Label
+var _save_path := "user://saves/dungeon.json"
 
 
 func setup(game_context: GameContext, keeper: KeeperController) -> void:
@@ -60,6 +68,7 @@ func setup(game_context: GameContext, keeper: KeeperController) -> void:
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_root)
 	_build_header()
+	_build_save_controls()
 	_build_footer()
 	_build_debug()
 	_build_workers()
@@ -112,9 +121,73 @@ func _process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode in [KEY_F5, KEY_F9]:
+		var focus := get_viewport().gui_get_focus_owner()
+		if focus is LineEdit or focus is TextEdit or event.ctrl_pressed or event.alt_pressed or event.meta_pressed or event.shift_pressed:
+			return
+		get_viewport().set_input_as_handled()
+		if event.keycode == KEY_F5:
+			save_requested.emit()
+		else:
+			load_requested.emit()
+		return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F3:
 		_debug_panel.visible = not _debug_panel.visible
 		get_viewport().set_input_as_handled()
+
+
+func _build_save_controls() -> void:
+	_save_panel = _panel()
+	_save_panel.name = "SaveControls"
+	_save_panel.position = Vector2(16, 72)
+	var style := _save_panel.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
+	style.content_margin_top = 6
+	style.content_margin_bottom = 6
+	_save_panel.add_theme_stylebox_override("panel", style)
+	_root.add_child(_save_panel)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	_save_panel.add_child(row)
+	_save_button = _save_control_button("Save", "Save  [F5]", func(): save_requested.emit())
+	row.add_child(_save_button)
+	_load_button = _save_control_button("Load", "Load  [F9]", func(): load_requested.emit())
+	row.add_child(_load_button)
+	_save_status = _label("Manual save", 13, MUTED)
+	_save_status.name = "SaveStatus"
+	_save_status.custom_minimum_size.x = 280
+	_save_status.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_save_status.mouse_filter = Control.MOUSE_FILTER_PASS
+	_save_status.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(_save_status)
+	set_save_path(_save_path)
+
+
+func _save_control_button(node_name: String, text: String, action: Callable) -> Button:
+	var button := Button.new()
+	button.name = node_name
+	button.text = text
+	button.focus_mode = Control.FOCUS_NONE
+	button.add_theme_color_override("font_color", INK)
+	button.pressed.connect(action)
+	return button
+
+
+func set_save_path(path: String) -> void:
+	_save_path = path
+	if _save_button == null:
+		return
+	var location := ProjectSettings.globalize_path(path)
+	_save_button.tooltip_text = "Save this dungeon to the manual slot. Replaces the previous manual save.\n%s" % location
+	_load_button.tooltip_text = "Restore the manual save. Unsaved changes are replaced only after the save is validated.\n%s" % location
+	_save_status.tooltip_text = "%s\n%s" % [_save_status.text, location]
+
+
+func show_save_result(message: String, success: bool) -> void:
+	if _save_status == null:
+		return
+	_save_status.text = message
+	_save_status.add_theme_color_override("font_color", Color(0.62, 0.82, 0.52) if success else Color(0.97, 0.48, 0.36))
+	_save_status.tooltip_text = "%s\n%s" % [message, ProjectSettings.globalize_path(_save_path)]
 
 
 func _build_header() -> void:
@@ -250,7 +323,7 @@ func _show_keeper_result(result: Dictionary) -> void:
 
 func _build_debug() -> void:
 	_debug_panel = _panel()
-	_debug_panel.position = Vector2(16, 78)
+	_debug_panel.position = Vector2(16, 124)
 	_debug_panel.visible = false
 	_root.add_child(_debug_panel)
 	_debug_content = VBoxContainer.new()

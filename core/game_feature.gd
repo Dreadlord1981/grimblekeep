@@ -11,3 +11,16 @@ func setup(game_context: GameContext) -> void:
 
 func tick(_delta: float) -> void:
 	pass
+
+
+func persistence_id() -> StringName:
+	# Stateless features need no save entry. Stateful extensions use a stable ID.
+	return &""
+
+
+func capture_state() -> Dictionary:
+	return {}
+
+
+func restore_state(data: Dictionary) -> String:
+	return "Unsupported feature state" if not data.is_empty() else ""

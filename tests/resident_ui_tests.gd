@@ -23,7 +23,14 @@ func _run() -> void:
 	await process_frame
 	_check(_hud.active_tab == &"creatures" and not _hud.get("_debug_panel").visible and not _hud.get("_marks").is_visible_in_tree(), "Default hub shows Creatures while verbose controls and actor details stay hidden in F3")
 	var hub: DungeonHub = _hud.get("_hub")
-	_check(hub.creature_badges[&"resident_ui.worker"].text == "3" and hub.creature_badges[&"resident_ui.grubbin"].text == "1" and hub.creature_badges[&"resident_ui.empty"].text == "0", "One portrait per species carries its actual population overlay including zero")
+	_check(hub.creature_badges[&"resident_ui.worker"].text == "3" and hub.creature_badges[&"resident_ui.grubbin"].text == "1" and hub.creature_buttons[&"resident_ui.worker"].is_visible_in_tree() and hub.creature_buttons[&"resident_ui.grubbin"].is_visible_in_tree(), "Populated species show their actual population overlays")
+	_check(not hub.creature_buttons[&"resident_ui.empty"].is_visible_in_tree(), "A registered species that has never arrived has no visible portrait or zero-count card")
+	var arrival := _context.spawn_creature(&"resident_ui.empty", Vector2i(4, 4))
+	_check(hub.creature_buttons[&"resident_ui.empty"].is_visible_in_tree() and hub.creature_badges[&"resident_ui.empty"].text == "1", "First arrival immediately reveals its species portrait with the correct count")
+	_context.keeper.pickup(arrival.id)
+	_check(hub.creature_buttons[&"resident_ui.empty"].is_visible_in_tree() and hub.creature_badges[&"resident_ui.empty"].text == "1", "Picking up the only member keeps its species in the overview")
+	_context.despawn_creature(arrival.id)
+	_check(not hub.creature_buttons[&"resident_ui.empty"].is_visible_in_tree(), "Removing the last member immediately hides its species card")
 	_check(hub.creature_buttons[&"resident_ui.grubbin"].custom_minimum_size == Vector2(80, 80), "Species overview uses a large portrait card")
 	_check(_hud.get("_worker_rows").size() == 3 and _hud.get("_resident_rows").size() == 1, "Worker and resident rows remain separate")
 	_check(_hud.get("_worker_count").text == "WORKERS   3" and _hud.get("_resident_count").text == "RESIDENTS   1", "Header counts workers and residents independently")
@@ -94,7 +101,7 @@ func _run() -> void:
 	await process_frame
 	_check(_hud.get("_resident_rows").is_empty() and _hud.get("_resident_count").text == "RESIDENTS   0", "Removing a resident clears its row and count without touching workers")
 	_check(_hud.get("_worker_rows").size() == 3, "Resident removal preserves the three worker rows")
-	_check(hub.creature_badges[&"resident_ui.grubbin"].text == "0", "Despawn immediately updates the species population overlay")
+	_check(not hub.creature_buttons[&"resident_ui.grubbin"].is_visible_in_tree(), "Last resident departure hides the empty species portrait")
 	for failure in _failures:
 		push_error(failure)
 	print("RESIDENT UI RESULT: %d checks, %d failures" % [_checks, _failures.size()])

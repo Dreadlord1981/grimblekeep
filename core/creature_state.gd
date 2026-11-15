@@ -19,6 +19,8 @@ var energy: float = 1.0
 var rest_requested: bool = false
 var satiety: float = 1.0
 var food_requested: bool = false
+## Appetite hysteresis survives unavailable meals; it does not own movement.
+var hunger_intent: bool = false
 var needs_requested: bool:
 	get:
 		return rest_requested or food_requested

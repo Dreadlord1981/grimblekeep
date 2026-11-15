@@ -1,7 +1,7 @@
 # Grimblekeep
 
 A real-time 3D dungeon game about building a home for unpleasant little creatures.
-Godot 4.7.2 Standard / GDScript. Current slice: excavation, mining, Treasury/Lair/Pig Pen construction, living Grubbins and keeper creature inspection/pickup/drop.
+Godot 4.7.2 Standard / GDScript. Current slice: excavation, mining, Treasury/Lair/Pig Pen construction, living Grubbins, mixed keeper-hand pickup/drop and manual save/load.
 
 ## Run
 
@@ -29,6 +29,20 @@ until you build more storage. Heart storage cannot be sold or built over.
 This is a finite starting bank. Mining pauses when reachable storage is full and
 resumes after spending or expansion. Test fixtures can set `starting_gold=0`;
 `use_heart_storage=false` explicitly selects the older Treasury fixture.
+
+Use **Save [F5]** and **Load [F9]** below the header. There is one manual slot;
+saving replaces it and loading replaces the current dungeon, including unsaved
+changes. New launches start fresh until you choose Load. Shortcuts pause while
+editing a creature's name. Saves live at `user://saves/dungeon.json`, normally
+`%APPDATA%/Godot/app_userdata/Grimblekeep/saves/dungeon.json` on Windows; hover the
+buttons for the resolved path. A retained `.bak` supports interrupted-write recovery.
+
+The snapshot includes terrain, rooms, Heart storage, gold/food ledgers, creatures,
+names, needs, beds, pigs and production progress, camera and the **entire ordered
+mixed hand queue**, with each gold batch and creature's cargo. Held creatures stay
+held after loading. Active jobs, routes and meal reservations are rebuilt safely.
+Files are versioned JSON; incompatible/damaged saves report an error and leave
+your current dungeon intact. No autosave is active.
 
 Controls: WASD/arrows or middle drag to pan, right drag or Q/E to orbit, wheel to
 zoom, Home to return to the Heart. The keeper hand marks stone, gold and gem tiles
@@ -90,7 +104,8 @@ tiles becomes loose gold; refunds fill remaining storage or drop onto the floor
 if no space remains. Right-click, Escape or Done exits construction without clearing
 dig orders. A canceled drag cannot place/sell tiles when the left button releases.
 The bottom hub starts on **Creatures**, with one portrait per species and its
-population overlaid. Switch to **Rooms** for chest/bed/pig build icons, tile prices
+population overlaid. Species appear only while they have a creature in your dungeon,
+including creatures held in the hand; future arrivals are hidden. Switch to **Rooms** for chest/bed/pig build icons, tile prices
 and connected-room counts. Hover for names, total tiles and capacity. F3 opens
 the debug window with individual actions/needs and controls; there is no fixed
 right sidebar or verbose footer. Construction feedback follows the cursor.
@@ -135,7 +150,7 @@ input, worker and room integration checks and exits nonzero on failures.
 
 This is an early living-dungeon sandbox, not the complete pet dungeon. Mood,
 wages, cooking/crafting, combat, a second species, work-based
-leveling and saves remain later packages. Food definitions, producer rooms and
+leveling remain later packages. Food definitions, producer rooms and
 meal reservations support later extensions; no cooking or wage payment exists yet.
 See `LORE.md` for the accepted first-creature and
 specialist-community direction.

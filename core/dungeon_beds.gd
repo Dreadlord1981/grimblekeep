@@ -24,6 +24,19 @@ func get_bed(actor_id: int) -> BedState:
 	return beds.get(actor_id)
 
 
+func restore_bed(bed: BedState) -> bool:
+	# Persistence restores ownership, never simulates a remote claim.
+	if bed == null or beds.has(bed.owner_id) or not _footprint_valid(bed.anchor, bed.size, bed.room_tag, bed.owner_id):
+		return false
+	for y in range(bed.anchor.y, bed.anchor.y + bed.size.y):
+		for x in range(bed.anchor.x, bed.anchor.x + bed.size.x):
+			var cell := Vector2i(x, y)
+			bed.cells.append(cell)
+			_occupied[cell] = bed.owner_id
+	beds[bed.owner_id] = bed
+	return true
+
+
 func find_space(definition: CreatureDefinition, from_cell: Vector2i) -> Vector2i:
 	if definition == null or &"rest" not in definition.capabilities or not _grid.is_walkable(from_cell):
 		return INVALID

@@ -103,6 +103,17 @@ func get_items() -> Array[KeeperHandItem]:
 	return _items.duplicate()
 
 
+func next_item_id() -> int:
+	return _next_item_id
+
+
+func restore_custody(items: Array[KeeperHandItem], next_id: int, inspected: CreatureState) -> void:
+	# Called on a detached, validated session before features subscribe.
+	_items = items.duplicate()
+	_next_item_id = next_id
+	_inspected = inspected
+
+
 func peek_item() -> KeeperHandItem:
 	return _items[0] if not _items.is_empty() else null
 

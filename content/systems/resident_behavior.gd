@@ -32,6 +32,10 @@ func _init(game_context: GameContext, creature: CreatureState) -> void:
 	_explore_index = actor.id * 17
 	_navigation = ResidentNavigation.new(game_context.grid, actor)
 	_feeding = ResidentFeeding.new(game_context, actor)
+	# Reconstruct intent, not stale routes or reservations, after a saved session.
+	_needs_rest = actor.rest_requested
+	_bed = game_context.beds.get_bed(actor.id)
+	_sleeping = actor.action == &"sleeping" and _bed != null and _bed.established and actor.position.distance_to(_bed.center(game_context.grid)) <= DungeonBeds.CLAIM_DISTANCE
 
 
 func tick(delta: float, definition: CreatureDefinition) -> void:

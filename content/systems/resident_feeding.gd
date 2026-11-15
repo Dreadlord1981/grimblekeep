@@ -7,7 +7,11 @@ var _context: GameContext
 var _actor: CreatureState
 var _navigation: ResidentNavigation
 var _reservation: FoodReservation
-var _hungry := false
+var _hungry: bool:
+	get:
+		return _actor.hunger_intent
+	set(value):
+		_actor.hunger_intent = value
 var _engaged := false
 var _retry_in := 0.0
 var _progress := 0.0
@@ -25,7 +29,7 @@ func _init(context: GameContext, actor: CreatureState) -> void:
 	_navigation = ResidentNavigation.new(context.grid, actor)
 	_reservation = context.food.get_reservation(actor.id)
 	_engaged = _reservation != null
-	_hungry = _engaged
+	_hungry = _hungry or _engaged or actor.food_requested
 
 
 func update_need(delta: float, definition: CreatureDefinition) -> void:

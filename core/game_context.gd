@@ -23,6 +23,15 @@ var hovered_cell := Vector2i(-1, -1)
 var _next_actor_id: int = 1
 
 
+func next_actor_id() -> int:
+	return _next_actor_id
+
+
+func restore_actor_sequence(next_id: int) -> void:
+	# Detached save reconstruction only; validated by the persistence boundary.
+	_next_actor_id = next_id
+
+
 func _init(dungeon_grid: DungeonGrid = null, content_registry: ContentRegistry = null) -> void:
 	grid = dungeon_grid
 	registry = content_registry

@@ -1,11 +1,11 @@
 # Grimblekeep — shared development checklist
 
-Status: unlimited mixed keeper-hand FIFO queue accepted, extending verified controls, hub and protected Heart storage (2026-11-15). Full pet-dungeon milestone remains open.
+Status: M4A manual save/load accepted locally (2026-11-15), including full mixed hand custody. Full pet-dungeon and robustness milestones remain open.
 Updated: 2026-11-15
 
 ## How to use this plan
 
-- User authorized keeper-hand pickup/drop and creature inspection, preserving creature jobs and gold/food. Also change Pig Pen minimum/density from 3x1 to 2x1 (or rotated), one pig per two tiles. Saving, wages, crafting, combat, XP, second species and cooking remain separate packages.
+- Latest authorization: implement modular manual save/load, including the complete ordered mixed hand queue. Preserve verified keeper controls, gold/food conservation, rooms, needs and two-tile Pig Pen density. Wages, crafting, combat, XP, second species and cooking remain separate packages.
 - Read this file and `AGENTS.md` before starting work.
 - Work toward the current milestone. Keep the game playable as systems are added.
 - Use `[ ]` for pending work and `[x]` only for work verified against its acceptance criteria.
@@ -222,7 +222,7 @@ Evidence: 48 scripts validate and 870 automated checks pass, including 42 room r
 - [x] Inspect/name creatures and display their current action and supported needs/cargo/bed in a focused closable panel.
 - [x] Pick up eligible friendly creatures with the keeper hand and drop them on valid accessible dungeon floor; invalid drops keep them held and show why.
 - [x] Suspend movement/jobs/needs while held, release stale reservations and resume sensible behavior after dropping; prevent duplicate creatures and recover held-creature removal/cargo safely.
-- [ ] Persistence follow-up: save/load held identity, names, cargo and safe resumption with the rest of the session in Milestone 4. No save behavior is claimed by M3C.
+- [x] M4A persistence: save/load the full ordered mixed hand queue, held identities, names, cargo, origins and gold batches with safe session resumption.
 
 Gate: expanding the dungeon changes which species can arrive; residents repeatedly satisfy needs without starvation loops, reservation leaks or becoming stuck. Keeper-hand pickup/drop works across camera views, respects placement rules and leaves creature/job state consistent.
 
@@ -230,10 +230,10 @@ M3A evidence: 59 scripts validate and 1,039 checks pass (including 24 bed contra
 
 ### 4. Persistence and robustness
 
-- [ ] Save/load terrain, rooms, stored/carried gold, food, creatures and needs.
-- [ ] Preserve the Heart's location and its chamber through save/load without duplicating or losing the central landmark.
-- [ ] Version the save format and handle invalid saves without overwriting a valid save.
-- [ ] Verify a save round trip and resumption of sensible jobs after loading.
+- [x] Save/load terrain, rooms, stored/carried gold, food, creatures and needs.
+- [x] Preserve the Heart's location and its chamber through save/load without duplicating or losing the central landmark.
+- [x] Version the save format and handle invalid saves without overwriting a valid save.
+- [x] Verify a save round trip and resumption of sensible jobs after loading.
 - [ ] Run a seeded extended simulation covering excavation, arrival, eating and sleeping.
 - [ ] Measure frame time and simulation time against a recorded reference machine, map size and population.
 
@@ -270,6 +270,8 @@ Gate: exported build supports the complete loop with cohesive presentation, reli
 - Report observed results honestly. Separate measured performance and tested behavior from estimates and untested assumptions.
 
 ## Active assignments
+
+- Hub population visibility follow-up accepted (2026-11-15): show species only while at least one member is in the dungeon (including held actors); first arrival reveals immediately, last departure hides. Room build choices remain available. No discovery/unlock mechanic or save schema change. Lead resident UI45/0 and fresh-game GPU capture `artifacts/foundation.png` inspected; independent keeper UI40/0 and save integration28/0 pass, review approved. User also requested future animation and economy balancing passes; recorded in backlog without starting implementation.
 
 - M3C-queue accepted: lead implemented stable KeeperHandItem entries, ordered KeeperState, per-entry pickup origins and partial aggregate gold transfers; input agent enabled appending world/G pickups and FIFO right drops; UI agent added virtualized queue cards/pinned next summary and front-entry model binding; behavior reviewer independently exercised mixed FIFO and recovery. No gameplay count cap or same-type restriction. Invalid drops retain all order; duplicate physical actors cannot be queued twice. Queued creatures freeze/resume individually; gold remains in the ledger and each right-click debits only its own batch. Current core queue21, independent queue32, input104, UI40 and gold27/review40 all pass, including140 mixed entries, removal of head/middle/tail, reloads, resumed209 gold/3 meals, distinct gold batches and Heart-less origins. UI renders at most10 cards while scrolling all authoritative entries; a 40-entry GPU fixture proves later entries remain accessible. Actual queue-card inspection preserves order/model; card disposal safely detaches then queue-frees. Final check101 scripts/0, full test2,010/0, queue GPU18/0 plus keeper33/food31/Heart-gold20 all independently rerun by lead. Independent core/input/visual reviews approved. Existing creatures/gold only; no new economy, food/landmark pickup or saves.
 
@@ -319,12 +321,15 @@ For each future package record: ID, objective, implementer, reviewer, owned file
 
 ## Latest handoff
 
-- Completed: unlimited mixed keeper-hand queue. Left-click appends creatures/gold, each right-click drops the oldest entry, and invalid drops preserve order. An ordered scrollable strip shows entries and a pinned next summary; the actual next model/name/amount stays correct even while inspecting another actor. Individual info remains in the bottom hub. Protected Heart storage (3,000/4,000, no prebuilt Treasury), shared-floor drops, food/rest and the two-tile Pig Pen rule remain verified.
-- Verification: check101 scripts/0, full test2,010/0. Queue core21/review32, input104, UI40, gold27/review40 plus existing suites pass. Lead independently reran queue GPU18/0, keeper33/0, food31/0 and Heart/gold20/0 (102 graphical checks). Independent core/input/behavior/visual reviews approved.140 mixed entries,40-item scrolling, exact FIFO identities/amounts, removals, reloads and resumed jobs/food conserve quantities. See `docs/VERIFICATION.md`.
-- Known limits: no artificial hand count limit, but only currently eligible creatures/gold are pickable; no food/landmark pickup. One Grubbin portal cap remains. No save/load, starvation damage, mood, wages, cooking/crafting, combat or XP. Queued needs freeze; interrupted tasks replan. No broad large-world performance, native OS input or export gate is claimed. Current assets remain procedural. The user playtested and approved this checkpoint for commit/push; refer to Git history for its revision.
-- Next action: discuss current progress and the next focused package after this Git checkpoint. Save/load should preserve the full ordered queue, origins, names and per-batch gold; a second species/attraction and needs consequences are also pending. User requested future hand polish with actual creatures dangling from the keeper's hand. Record that direction without starting it or another system until authorized.
+- Completed: M4A modular manual save/load. Save [F5]/Load [F9] controls below the header use one user://saves/dungeon.json slot. Exact grid/Heart/portal/marks, room membership, protected storage, economic counters, actors/names/needs/cargo, established and pending beds, physical food identity/pose/age and production progress, camera and complete mixed FIFO queue restore. Held actors remain frozen; active jobs/routes/meal reservations rebuild safely. Stateful extensions use stable feature persistence hooks; resident arrival clock persists.
+- Verification: scripts114/0; full headless suite2,232/0 before one additional app recovery assertion, then focused GPU integration28/0. New state53, independent review106, UI22, feature extension14, integration28 all pass (current headless coverage2,233 checks). Lead and independent reviewer inspected artifacts/save-loaded-queue.png at1280x800. Independent code/behavior/visual reviews approved. Saved unfinished mining strikes/cargo, meals, sleepers, unmet hunger, pending homes,48-entry mixed queues, removed-actor gold and stranded food remain conserved. See docs/VERIFICATION.md.
+- Findings repaired: unmet hunger after a partial meal/no food was private AI state and could be forgotten on load; appetite intent is now persistent, separate from movement ownership. Bed and producer profiles reject incompatible changed content. Invalid data never replaces the live session; verified temporary files and retained .bak protect disk replacement. Missing primary can recover the backup with explicit feedback. Corrupt primary remains untouched and reports an error; manual file repair/removal is required before saving over it. No power-loss durability guarantee.
+- Known limits: one manual slot, no autosave/cloud or older/future-format migrations. Loaded unfinished work replans rather than restoring exact partial task/meal timing. Full Milestone4 remains open for extended operation/profiling. One Grubbin cap, no mood/wages/crafting/combat/XP, procedural art and native/export limitations remain. Future dangling-creature hand presentation stays in backlog.
+- Next action: user requested commit/push of the accepted save/load and population-only creature overview checkpoint. Then discuss current progress and next package: second species/attraction, remaining robustness, animation and economy-balancing passes are candidates. No new feature is authorized by the Git checkpoint request. Save/load and hub need continuing user playtests; do not restart the user's running session without preserving their manual save.
 
 ## Later backlog
+
+- User checkpoint after save/load: much more creature/keeper/world animation and an economy-balancing pass are needed. Treat current room prices, mining rates, production and need rates as provisional; tune through observed dungeon play rather than changing arbitrary values. Record animation needs for movement, digging/mining, hauling, pickup/drop, eating/sleeping and pigs; authorize focused packages before implementation. This feedback does not start a new animation or pricing system.
 
 - Training, research, traps, doors, spells and creature progression.
 - Combat, invading heroes, defenses and campaign objectives.
@@ -332,3 +337,13 @@ For each future package record: ID, objective, implementer, reviewer, owned file
 - Richer creature relationships, humor and room interactions.
 - Improved models, textures, animation, accessibility, audio and wider playtesting.
 - Keeper-hand visual refinement: show the actual held creature dangling and moving from the hand, replacing portrait-like held presentation. Preserve exact next-item identity and readable mixed queue/drop feedback. This is future presentation polish, not a new custody mechanic.
+
+## Save/load package — M4A accepted (2026-11-15)
+
+- User authorized modular save/load, including creatures and gold in the complete ordered hand queue.
+- Ownership: persistence implementer owns `persistence/` and persistence state tests plus narrowly necessary core restore APIs; lead owns app session replacement, desktop save/load controls, integration/GPU checks and documentation; independent reviewer owns adversarial persistence/resumption tests and review. No overlapping edits.
+- Contract: `DungeonSave.capture(context) -> Dictionary`, `DungeonSave.restore(data, registry) -> Dictionary` returning `{context, error}` (context null on failure); `DungeonSaveStore.write_save(path, data) -> String` (empty on success), `read_save(path, registry) -> Dictionary` with same context/error result. Versioned JSON, validated detached restore, transactional replacement and disk writes that preserve the prior valid save on failures. Feature extension state exposed through stable feature IDs/hooks; ephemeral jobs/routes/reservations replan safely instead of restoring stale owners.
+- Acceptance: exact terrain/landmarks/marks, room membership, protected Heart capacity and all gold ledger balances, stable actor identities/names/positions/needs/cargo, established/pending beds, physical food IDs/ages/positions/production progress, counters and ordered mixed hand entries with origins/IDs/amounts. Held actors stay frozen and only resume on drop. Unknown content/version, malformed state, duplicate identities or inconsistent ledgers fail without touching the live dungeon or valid save. Save/load accessible from the desktop HUD and shortcuts, with clear feedback.
+- Verification: focused round trips and corruption/disk-failure cases, independent review and continuation scenarios, script validation/full regression suite, graphical session/input checks and inspected post-load capture. Bounded package: one manual save slot, no autosave/cloud UI, new gameplay or art polish. Milestone 4 profiling/extended-operation gates remain separate.
+- Evidence:114 scripts validate; state53/review106/UI22/feature14/integration28 checks pass. Full existing gameplay regression passes; graphical load capture inspected. Independent reviews approved. Extended-operation/profiling gates remain open.
+- Status: accepted locally; user playtest pending.

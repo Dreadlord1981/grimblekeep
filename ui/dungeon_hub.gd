@@ -108,6 +108,7 @@ func refresh() -> void:
 			if actor.definition_id == id:
 				count += 1
 		creature_badges[id].text = str(count)
+		creature_buttons[id].visible = count > 0
 		var definition := _context.registry.get_creature(id)
 		creature_buttons[id].tooltip_text = "%s\nPopulation %d\nClick to inspect; click again to cycle individuals." % [definition.display_name, count]
 	for id in room_buttons:

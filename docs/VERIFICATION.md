@@ -4,10 +4,64 @@ Foundation, workers, Treasury Build/Sell and the first Grubbin/Lair rest loop ar
 verified locally with independent review. M3B adds verified Pig Pen production,
 growth, roaming and eating, plus a 3,000-gold playtest start. M3C keeper pickup/drop
 and creature inspection are verified below. Mood/wages, a second species,
-leveling and saving remain pending. Earlier sections below
+leveling remain pending; M4A manual save/load is verified below. Earlier sections below
 the current checkpoint retain their historical counts and scope.
 
-## Unlimited mixed keeper queue — current verification
+## M4A manual save/load — current verification
+
+Population-only creature overview follow-up: resident UI **45/0**, independent
+keeper UI **40/0** and save integration **28/0**, no blockers in review. Future
+species portraits are hidden until their first arrival; last-member removal hides
+the card, while held actors remain counted. Fresh-game GPU capture
+`artifacts/foundation.png` inspected: only the three-worker species card is shown,
+with no zero-population Grubbin portrait. Room choices remain available. This adds
+four checks to the preceding2,233 coverage (current total2,237). Focused UI and
+save integration suites were rerun for this presentation follow-up.
+
+`tools/dev.ps1 check`: **114 scripts, zero failures**. Full headless runner:
+**2,232 checks, zero failures**; afterward one extra app backup-recovery assertion
+passed in focused integration, bringing current coverage to **2,233 checks**.
+New suites: state53, independent review106, UI22, feature-extension14, integration28.
+Lead reran final state/review suites independently (53/106, zero failures).
+
+Final GPU `tests/save_integration_tests.gd -- --render-save`: **28/0**, NVIDIA
+RTX4060, Compatibility OpenGL,1280x800. Lead and independent UI reviewer inspected
+`artifacts/save-loaded-queue.png`. Real Viewport F5/F9 restore a played dungeon
+with Unicode names, saved camera, one Heart/portal, rooms, food, beds, excavation
+orders, protected starting storage and four ordered hand entries (worker carrying23,
+31gold, Grubbin,47gold). App replacement binds new views/input/HUD to the new
+context, reports success and preserves frozen custody. FIFO drops and resumed
+jobs/meals conserve all gold/food. A fresh app can load disk without another gold grant.
+Independent UI tests exercise actual Save/Load buttons, UI isolation, suppressed
+repeats/modifiers/text-edit shortcuts and bounded error/status tooltips.
+
+Independent review covers48 entries, identity counters after removals/consumption,
+repeated JSON round trips, unfinished mining strike plus loaded carrier, established
+and invisible pending beds, sleepers in the hysteresis band, partial meals and
+unmet hunger after food depletion, orphaned37gold, blocked food after source sale,
+food pose/age/producer phase, and conservation on every continuation tick.
+The unmet-hunger test exposed private appetite intent lost at load; persistent
+`CreatureState.hunger_intent` now preserves it without claiming movement ownership.
+
+Adversarial checks reject missing/unknown/malformed/duplicate IDs, versions,
+terrain, room/bed/producer profiles, nonfinite values, mismatched custody/stock
+and unbalanced ledgers. Validation constructs detached candidates before live
+replacement. Stateful test-only mechanics round-trip through stable feature hooks;
+missing/unavailable/duplicate features and invalid camera data reject clearly.
+Disk tests verify exact previous bytes survive rejected writes, retained .bak,
+missing-primary recovery after an interrupted rename, corrupt-primary protection,
+malformed JSON, missing files and path/directory errors. App reports backup recovery.
+A corrupt existing primary is preserved and must be repaired/moved before saving
+over it; no automatic fallback to an older save on explicit corruption is claimed.
+
+No autosave/cloud/multiple-slot browser, format migration, crash/power-loss durability,
+large-population performance or complete Milestone4 acceptance is claimed. Temporary
+routes, jobs and timed bites/strikes replan rather than resuming exact partial timing.
+Native OS input/export gates remain as recorded below; engine input routing and
+actual rendered state are verified. User authorized commit/push of this checkpoint;
+refer to Git history for its revision.
+
+## Unlimited mixed keeper queue — prior checkpoint
 
 `tools/dev.ps1 check`: **101 scripts, zero failures**. Full
 `tools/dev.ps1 test`: **2,010 checks, zero failures**, independently executed by
