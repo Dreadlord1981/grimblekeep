@@ -7,7 +7,148 @@ and creature inspection are verified below. Mood/wages, a second species,
 leveling remain pending; M4A manual save/load is verified below. Earlier sections below
 the current checkpoint retain their historical counts and scope.
 
-## M4A manual save/load — current verification
+## Room corners and lighter excavation highlights — current verification
+
+Final check: **133 scripts, zero failures**. Full headless runner:
+**2,501 checks, zero failures**, exit0 (`artifacts/room-corners-full-tests.log`).
+New independent room-corner32/0; wall58/room42/food28 independently rerun.
+
+Actual Compatibility graphical room probe: **20/0**, independently run by lead and
+presentation implementer. Inspected `artifacts/room-corners-pigpen-3x3.png`,
+`room-corners-pigpen-5x5.png` and `room-corners-loaded.png`: all supported corner
+lamps face inward, floor and pigs remain readable, darkness outside is retained,
+and there are no floor poles. Verified growth/split/merge, no duplicate fixtures,
+real wall support, floor/bed coexistence, saved exact mount faces, missing old
+corner catch-up, mixed custody and resource conservation. Source and visuals
+approved by independent reviewer. No global lighting or lamp cost change.
+
+Excavation overlay uses alpha mixing with bounded face opacity.035/edge.24 rather
+than the stronger additive face fill. Lead pixel/render regression **20/0** samples
+a dense4x4 marked area over three pulse phases: dark-rock red channel beforeselection
+.02-.04, new selectedcenters.05-.07; former centers were.13-.16. Strong outlines and
+top/side glow remain. Independent graphical diagnostic **4/0** proves alpha works
+in Compatibility and repeated refreshes keep one shell per cell. Exact solid-orange
+user screenshot was not reproduced in a fresh runtime; the change reduces/bounds
+fill safely, without claiming an unverified driver/ignored-alpha bug.
+
+Independent review approved. No live game was restarted or saved automatically;
+prior Windows window-control initialization failure still applies. User can F5 save,
+restart and F9 load to apply corner fixtures and the new overlay. User playtested and approved this checkpoint for commit/push; refer to Git history.
+
+## Immediate wall sconces — prior checkpoint
+
+Final `check`: **129 scripts, zero failures**. Full headless runner:
+**2,469 checks, zero failures**, exit0 (`artifacts/wall-lamps-full-tests.log`).
+New independent wall suite58/0, updated infrastructure46/0 and exploration76/0.
+Lead, presentation implementer and independent reviewer each ran the actual
+`wall_lamp_render_probe.gd`: **36/0**, Compatibility/RTX4060 at1280x800.
+
+Inspected `artifacts/wall-lamp-close.png`, `wall-lamp-excavation.png`,
+`wall-lamps-start.png`, `wall-lamps-room.png`, `wall-lamps-living-room.png`,
+`wall-lamps-room-fixtures.png` and `wall-lamps-loaded.png`. Wall plates/brackets
+attach to real supporting faces; all mesh bounds remain above0.85 and the local
+shadow light is at1.65, below ordinary wall height. There is no floor post or
+unsupported interior fallback. Rooms and established beds use the same access
+floor without losing their wall fixture. Opposite faces of a shared wall persist.
+
+Excavation removes invalid supports and fits sparse replacement sconces immediately,
+before another feature tick. Tests verify idempotence, coverage spacing, continued
+mining/cargo/custody, room fixtures and exact service/support save restoration.
+Old floor and unfinished lamp saves convert to supported sconces where walls exist;
+malformed new mount references reject before live mutation. Portal claiming and
+optional worker-provider extension remain tested. Timed lamp-job expectations were
+replaced to follow the user's direct-installation instruction.
+
+Code/behavior/visual reviews approved. Current user game was left running unchanged:
+both native window-control entry points failed to initialise with kernel-assets
+path-not-found (os error3), so no save/reload action could be performed. User should
+F5 save and restart to apply; no live progress or existing save was overwritten.
+
+## Fog planning and wall visibility correction — prior checkpoint
+
+`tools/dev.ps1 check`: **127 scripts, zero failures**. New independent
+`fog_planning_tests.gd`: **52/0**; updated exploration review **76/0**. Revised
+fixtures keep the unknown portal outside the final wall-plus-four-row boundary.
+Final full headless runner: **2,410 checks, zero failures**, exit0; log at
+`artifacts/fog-plan-full-tests.log`. Updated game launched without errors in
+`artifacts/playtest-fog-plan.log`; no running user game was closed or overwritten.
+
+Lead and independent reviewer each ran graphical `fog_planning_render_probe.gd`:
+**22/0**. Lead also reran exploration graphical probe **34/0**. Inspected captures:
+`artifacts/fog-planned-room.png`, `fog-plan-removal.png`, `fog-plan-discovered.png`,
+`fog-plan-excavated.png` and `exploration-four-row-band.png`.
+
+Actual Viewport4x7 drag queues28 cells through fog. Identical amber/top-side geometry
+and ray height conceal unknown floor, bedrock, gold and portal contents. Repeat drag,
+Shiftadd, Ctrlremove, red-X previews, UI/stale release cancellation remain correct.
+Unknown marks persist through hidden terrain edits and JSON round trips. Discovery
+clears only non-diggable marks; known rock/gold/gems remain until dug/cancelled.
+Workers progressively complete the plan and never mine unknown mineral targets;
+resource ledgers balance. Existing build/Sell/keeper visibility guards stay active.
+
+The exposed wall plus four further rows is revealed around reachable dungeon space
+(five cells from the adjacent open-floor boundary). Knowledge persists as walls move.
+Revealed rock/bedrock has a faint dark material base for legible planning silhouettes;
+ambient remains0.055 and all actual environmental light comes from local fixtures.
+Unknown contents remain hidden. Current saves preserve planned unknown obstacles;
+older v2 saves without a radius validate their original one-tile frontier first,
+then expand knowledge and prune only newly revealed invalid plans. Malformed marks
+on originally known non-diggable tiles reject instead of being silently repaired.
+
+Independent core/input/overlay/save and visual review approved. Prior unseen-planning
+rejection checks were superseded by the user's explicit correction; hidden resource
+interaction and undiscovered work rejection continue to be tested. No other feature,
+price, art overhaul or Kitchen work was introduced.
+
+## M4B compact start, exploration and infrastructure — prior checkpoint
+
+`tools/dev.ps1 check`: **125 scripts, zero failures**. Full headless runner:
+**2,358 checks, zero failures**, including new infrastructure workers45 and
+independent exploration76. Worker/resident/keeper/room/food/save regressions all pass.
+Existing large-map scene probes explicitly select the development layout; actual
+starting-gold and new exploration tests exercise the compact player start.
+
+New graphical `tests/exploration_render_probe.gd`: **34/0**, run independently by
+presentation implementer and lead on RTX4060/Compatibility at1280x800. Lead and
+independent reviewer inspected all five artifacts:
+
+- `artifacts/exploration-dark-start.png`:24 Heart-chamber floor cells, three imps,
+  finite protected3,000gold, two initial lamps, black unknown space and remote beacon.
+- `artifacts/exploration-frontier-dig.png`:real Viewport marking and worker digging
+  reveal successive frontier blocks; unseen rock cannot be blindly designated.
+- `artifacts/exploration-claimed-lamps.png`:six dug corridor blocks lead to local
+  portal claiming and additional physical imp-installed lamps, with warm light pools.
+- `artifacts/exploration-lit-rooms.png`:built Lair/PigPen, claimed-portal Grubbin arrival,
+  local bed establishment and physical food; room floors remain readable in local light.
+- `artifacts/exploration-loaded.png`:app replacement preserves exact revealed footprint,
+  installed lamps, portal ownership and ordered worker/gold custody without resource loss.
+
+Independent checks cover never-seen resources/rooms/actors, direct API and input
+eligibility, hidden UI population cards, fog persistence after resealing passages,
+local/capability/held/needs guards, unreachable work, partial progress, safe resumption,
+claimed recruitment, corrupt new payloads, and validv1 ->v2 disk replacement with
+exact oldbytes inbackup. Found/fixed version preflight that rejected parsed JSON
+float2.0 through strict array membership; shared numeric envelope validation now
+accepts supported integer-valued versions and still rejects malformed versions.
+Worker tests prove provider extension, shared reservations/routes, cargo conservation,
+rest arbitration and optional lamp preemption within0.25seconds.
+
+Presentation source reviewed: no global DirectionalLight in dungeon view, small
+ambient baseline, local shadowed lights, opaque homogeneous fog and explicit
+hiding for tall actors/labels/food/rooms/beds/gold. Spatial terrain batches address
+Compatibility per-mesh light limits. No gameplay state is created by rendering.
+
+Version2 uses separate exploration/infrastructure state; version1 preserves old
+known terrain, active portals, identities, mixed custody and economy. Existing
+saved dungeons are not resized. Current game launched successfully; only the Godot
+editor was running beforehand, so no user game/save was closed or overwritten.
+
+Remaining scope: ever-explored knowledge only, no enemy line-of-sight/fog contest,
+no new currency or economy balance, no Kitchen/second species/model overhaul.
+Extended simulation/profiling, native OS input and exported-build gates remain open.
+The user subsequently playtested and authorized commit/push of the integrated checkpoint.
+
+## M4A manual save/load — prior checkpoint
 
 Population-only creature overview follow-up: resident UI **45/0**, independent
 keeper UI **40/0** and save integration **28/0**, no blockers in review. Future

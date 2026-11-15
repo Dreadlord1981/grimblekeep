@@ -42,6 +42,7 @@ func setup(game_context: GameContext) -> void:
 	_creature_input.action_finished.connect(_on_keeper_action_finished)
 	_overlay = OverlayScript.new()
 	_overlay.grid = context.grid
+	_overlay.exploration = context.exploration
 	add_child(_overlay)
 	camera = Camera3D.new()
 	camera.name = "KeeperCamera"
@@ -56,6 +57,7 @@ func setup(game_context: GameContext) -> void:
 	context.grid.tile_changed.connect(_on_terrain_changed)
 	context.rooms.changed.connect(_refresh_preview)
 	context.economy.changed.connect(_refresh_preview)
+	context.exploration.changed.connect(_on_exploration_changed)
 	context.keeper.changed.connect(_on_keeper_changed)
 	context.simulation_ticked.connect(_on_simulation_ticked)
 	_show_marks(context.last_marked_cell)
@@ -180,7 +182,7 @@ func recenter() -> void:
 func get_target_cell(screen: Vector2) -> Vector2i:
 	if camera == null or context == null:
 		return INVALID_CELL
-	return KeeperCreatureTargeting.terrain_hit(context.grid, camera.project_ray_origin(screen), camera.project_ray_normal(screen)).cell
+	return KeeperCreatureTargeting.terrain_hit(context.grid, camera.project_ray_origin(screen), camera.project_ray_normal(screen), context.exploration).cell
 
 
 func get_target_actor(screen: Vector2) -> CreatureState:
@@ -233,7 +235,7 @@ func rectangle_cells(first: Vector2i, last: Vector2i) -> Array[Vector2i]:
 	for y in range(mini(first.y, last.y), maxi(first.y, last.y) + 1):
 		for x in range(mini(first.x, last.x), maxi(first.x, last.x) + 1):
 			var cell := Vector2i(x, y)
-			if context.grid.can_excavate(cell):
+			if context.can_designate_excavation(cell):
 				result.append(cell)
 	return result
 
@@ -310,7 +312,7 @@ func _refresh_preview() -> void:
 	if context.keeper.is_holding():
 		_refresh_drop_preview()
 		return
-	var gold_hover := context.grid.is_inside(context.hovered_cell) and context.grid.get_tile(context.hovered_cell) == DungeonGrid.Tile.FLOOR and context.economy.gold_at(context.hovered_cell) > 0
+	var gold_hover := context.exploration.is_revealed(context.hovered_cell) and context.grid.get_tile(context.hovered_cell) == DungeonGrid.Tile.FLOOR and context.economy.gold_at(context.hovered_cell) > 0
 	if not is_constructing() and ((_drag_start == INVALID_CELL and (_hovered_actor_id != -1 or gold_hover)) or (_creature_input != null and _creature_input.has_pending())):
 		var empty: Array[Vector2i] = []
 		_overlay.show_preview(empty, empty, empty)
@@ -325,7 +327,7 @@ func _refresh_preview() -> void:
 	if _drag_start != INVALID_CELL:
 		candidates = rectangle_cells(_drag_start, _drag_end)
 	elif context.grid.is_inside(context.hovered_cell):
-		if context.grid.can_excavate(context.hovered_cell):
+		if context.can_designate_excavation(context.hovered_cell):
 			candidates.append(context.hovered_cell)
 		else:
 			blocked.append(context.hovered_cell)
@@ -393,6 +395,13 @@ func _on_terrain_changed(_cell: Vector2i) -> void:
 	# A worker may change the hovered block without moving the pointer.
 	_update_pointer_preview(pointer_position)
 	_refresh_preview()
+
+
+func _on_exploration_changed() -> void:
+	# A queued plan can become known rock without its membership changing.
+	# Reconcile both its top/side shell and the stationary-pointer preview.
+	_show_marks(context.last_marked_cell)
+	_update_pointer_preview(pointer_position)
 
 
 func _begin_drag(event: InputEventMouseButton) -> void:

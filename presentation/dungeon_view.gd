@@ -25,6 +25,8 @@ var _terrain_dirty := false
 var _landmark_dirty := false
 var _heart_cell := Vector2i(-1, -1)
 var _portal_cell := Vector2i(-1, -1)
+var _portal_views: Dictionary[Vector2i, DungeonPortalView] = {}
+var _unknown_material: StandardMaterial3D
 
 
 func setup(context: GameContext) -> void:
@@ -33,11 +35,15 @@ func setup(context: GameContext) -> void:
 	_crystal_mesh = DungeonGeometry.octahedron()
 	_bedrock_mesh = BoxMesh.new()
 	_bedrock_mesh.size = Vector3.ONE
-	_bedrock_material = DungeonGeometry.material(Color("242d39"))
-	_bedrock_band_material = DungeonGeometry.material(Color("45515b"))
-	_bedrock_crown_material = DungeonGeometry.material(Color("303d49"))
+	_bedrock_material = DungeonGeometry.material(Color("242d39"), Color("242d39"), 0.16)
+	_bedrock_band_material = DungeonGeometry.material(Color("45515b"), Color("45515b"), 0.16)
+	_bedrock_crown_material = DungeonGeometry.material(Color("303d49"), Color("303d49"), 0.16)
+	_unknown_material = DungeonGeometry.material(Color("050609"))
+	_unknown_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	for color in ["34313b", "403b43", "48414a", "37363d", "4c4148"]:
-		_stone_materials.append(DungeonGeometry.material(Color(color)))
+		# A faint remembered-rock base makes the revealed planning band legible.
+		# It illuminates no neighboring cells; lamps still light floors and actors.
+		_stone_materials.append(DungeonGeometry.material(Color(color), Color(color), 0.16))
 	for color in ["62584f", "6b5d50", "5c5551", "756454", "655d57"]:
 		_floor_materials.append(DungeonGeometry.material(Color(color)))
 	_gold_material = DungeonGeometry.material(Color("d6a146"), Color("e1972c"), 0.2)
@@ -70,12 +76,18 @@ func setup(context: GameContext) -> void:
 	_build_terrain()
 	_build_landmarks()
 	_build_props()
+	var infrastructure := DungeonInfrastructureView.new()
+	infrastructure.name = "InfrastructureLights"
+	add_child(infrastructure)
+	infrastructure.setup(context)
 	_refresh_gold()
 	for actor in _context.actors:
 		_add_actor(actor)
 	_context.actor_added.connect(_add_actor)
 	_context.keeper.actor_control_changed.connect(_on_actor_control_changed)
 	_context.grid.tile_changed.connect(_on_tile_changed)
+	_context.exploration.changed.connect(_on_exploration_changed)
+	_context.infrastructure.changed.connect(_sync_portals)
 
 
 func _process(delta: float) -> void:
@@ -93,7 +105,7 @@ func _process(delta: float) -> void:
 		if not _actor_views.has(actor.id):
 			continue
 		var view: Node3D = _actor_views[actor.id]
-		view.visible = not actor.is_held
+		view.visible = _actor_visible(actor)
 		if view.has_method("sync"):
 			view.call("sync", actor)
 		else:
@@ -127,7 +139,7 @@ func _add_actor(actor: CreatureState) -> void:
 	view.name = "Creature_%s" % actor.id
 	view.scale = Vector3.ONE * definition.scale_factor
 	view.position = actor.position
-	view.visible = not actor.is_held
+	view.visible = _actor_visible(actor)
 	_actor_root.add_child(view)
 	if view.has_method("setup_context"):
 		view.call("setup_context", _context)
@@ -137,7 +149,7 @@ func _add_actor(actor: CreatureState) -> void:
 func _on_actor_control_changed(actor: CreatureState) -> void:
 	var view: Node3D = _actor_views.get(actor.id)
 	if view != null:
-		view.visible = not actor.is_held
+		view.visible = _actor_visible(actor)
 		view.position = actor.position
 
 
@@ -145,23 +157,16 @@ func _build_lighting() -> void:
 	var world_environment := WorldEnvironment.new()
 	var environment := Environment.new()
 	environment.background_mode = Environment.BG_COLOR
-	environment.background_color = Color("100f18")
+	environment.background_color = Color("030407")
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color("8e85a0")
-	environment.ambient_light_energy = 0.55
+	environment.ambient_light_color = Color("647087")
+	environment.ambient_light_energy = 0.055
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	environment.fog_enabled = true
-	environment.fog_light_color = Color("181420")
-	environment.fog_density = 0.006
+	environment.fog_light_color = Color("050609")
+	environment.fog_density = 0.003
 	world_environment.environment = environment
 	add_child(world_environment)
-	var moon := DirectionalLight3D.new()
-	moon.rotation_degrees = Vector3(-55, -32, 0)
-	moon.light_color = Color("b5aac7")
-	moon.light_energy = 0.9
-	moon.shadow_enabled = true
-	moon.directional_shadow_max_distance = 100.0
-	add_child(moon)
 
 
 func _build_terrain() -> void:
@@ -175,12 +180,22 @@ func _build_terrain() -> void:
 	var bedrock_transforms: Array[Transform3D] = []
 	var bedrock_bands: Array[Transform3D] = []
 	var bedrock_crowns: Array[Transform3D] = []
+	var unexplored: Array[Transform3D] = []
 	var grid := _context.grid
 	for y in range(grid.height):
 		for x in range(grid.width):
 			var cell := Vector2i(x, y)
 			var tile := grid.get_tile(cell)
 			var at := grid.cell_to_world(cell)
+			if tile == DungeonGrid.Tile.HEART:
+				_heart_cell = cell
+			elif tile == DungeonGrid.Tile.PORTAL:
+				_portal_cell = cell
+			if not _context.exploration.is_revealed(cell):
+				# Every unknown cell has identical opaque geometry, regardless of
+				# hidden terrain, resources, chambers or other contents underneath.
+				unexplored.append(Transform3D(Basis.IDENTITY.scaled(Vector3(2.0, DungeonExploration.FOG_HEIGHT, 2.0)), at + Vector3(0, DungeonExploration.FOG_HEIGHT * 0.5, 0)))
+				continue
 			var variation := posmod(x * 71 + y * 31, 5)
 			if grid.is_solid(cell):
 				var height := grid.surface_height(cell) + 0.02
@@ -214,6 +229,7 @@ func _build_terrain() -> void:
 	_add_batch("BedrockCore", _bedrock_mesh, _bedrock_material, bedrock_transforms)
 	_add_batch("BedrockStrata", _bedrock_mesh, _bedrock_band_material, bedrock_bands)
 	_add_batch("BedrockCrowns", _bedrock_mesh, _bedrock_crown_material, bedrock_crowns)
+	_add_batch("UnexploredFog", _bedrock_mesh, _unknown_material, unexplored)
 	var slab_material := DungeonGeometry.material(Color("201e27"))
 	DungeonGeometry.box(_terrain, Vector3(grid.width * 2.0, 0.8, grid.height * 2.0), Vector3((grid.width - 1), -0.59, (grid.height - 1)), slab_material)
 
@@ -246,6 +262,22 @@ func _crystals_at_cell(cell: Vector2i, transforms: Array[Transform3D], height: f
 func _add_batch(label: String, mesh: Mesh, surface: Material, transforms: Array) -> void:
 	if transforms.is_empty():
 		return
+	if _context.exploration.enabled and label != "UnexploredFog":
+		# Compatibility lights are selected per mesh. Spatial batches stop distant
+		# fixtures from displacing the lights of a local patch of terrain.
+		var chunks: Dictionary[Vector2i, Array] = {}
+		for transform: Transform3D in transforms:
+			var key := Vector2i(floori(transform.origin.x / 8.0), floori(transform.origin.z / 8.0))
+			if not chunks.has(key):
+				chunks[key] = []
+			chunks[key].append(transform)
+		for key in chunks:
+			_add_spatial_batch("%s_%d_%d" % [label, key.x, key.y], mesh, surface, chunks[key])
+		return
+	_add_spatial_batch(label, mesh, surface, transforms)
+
+
+func _add_spatial_batch(label: String, mesh: Mesh, surface: Material, transforms: Array) -> void:
 	var multimesh := MultiMesh.new()
 	multimesh.transform_format = MultiMesh.TRANSFORM_3D
 	multimesh.mesh = mesh
@@ -260,6 +292,7 @@ func _add_batch(label: String, mesh: Mesh, surface: Material, transforms: Array)
 
 
 func _build_landmarks() -> void:
+	_portal_views.clear()
 	for child in _landmarks.get_children():
 		child.free()
 	if _heart_cell.x >= 0:
@@ -267,17 +300,17 @@ func _build_landmarks() -> void:
 		heart.name = "DungeonHeart"
 		heart.position = _context.grid.cell_to_world(_heart_cell)
 		_landmarks.add_child(heart)
-	if _portal_cell.x >= 0:
+		heart.visible = _context.exploration.is_revealed(_heart_cell)
+	for cell in _context.grid.cells_of_type(DungeonGrid.Tile.PORTAL):
 		var portal := DungeonPortalView.new()
-		portal.name = "CreaturePortal"
-		portal.position = _context.grid.cell_to_world(_portal_cell)
+		portal.name = "CreaturePortal_%d_%d" % [cell.x, cell.y]
+		portal.position = _context.grid.cell_to_world(cell)
+		portal.setup_state(_context.infrastructure.is_portal_claimed(cell), _context.exploration.is_revealed(cell))
 		_landmarks.add_child(portal)
+		_portal_views[cell] = portal
 
 
 func _build_props() -> void:
-	for cell in [Vector2i(10, 12), Vector2i(18, 12), Vector2i(10, 19), Vector2i(18, 19), Vector2i(12, 5), Vector2i(16, 5), Vector2i(6, 15)]:
-		if _context.grid.is_inside(cell):
-			_torch(_context.grid.cell_to_world(cell))
 	# Chamber floor motif is decoration, not a separate resource or mechanic.
 	if _heart_cell.x >= 0:
 		var brass := DungeonGeometry.material(Color("a17c40"))
@@ -286,26 +319,24 @@ func _build_props() -> void:
 		motif.scale.y = 0.18
 
 
-func _torch(at: Vector3) -> void:
-	var prop := Node3D.new()
-	prop.position = at
-	add_child(prop)
-	var iron := DungeonGeometry.material(Color("2b272a"))
-	var fire := DungeonGeometry.material(Color("ffc26c"), Color("ff8f30"), 3.0)
-	DungeonGeometry.cylinder(prop, 0.27, 0.16, Vector3(0, 0.08, 0), iron, 0.21)
-	DungeonGeometry.cylinder(prop, 0.07, 1.55, Vector3(0, 0.8, 0), iron)
-	DungeonGeometry.cylinder(prop, 0.12, 0.22, Vector3(0, 1.6, 0), iron, 0.24)
-	DungeonGeometry.sphere(prop, Vector3(0, 1.9, 0), Vector3(0.3, 0.65, 0.3), fire, 6)
-	var light := OmniLight3D.new()
-	light.position = Vector3(0, 2.15, 0)
-	light.light_color = Color("ffb36a")
-	light.light_energy = 2.1
-	light.omni_range = 8.0
-	prop.add_child(light)
+func _actor_visible(actor: CreatureState) -> bool:
+	return not actor.is_held and _context.exploration.is_revealed(_context.grid.world_to_cell(actor.position))
+
+
+func _sync_portals() -> void:
+	for cell in _portal_views:
+		_portal_views[cell].setup_state(_context.infrastructure.is_portal_claimed(cell), _context.exploration.is_revealed(cell))
+
+
+func _on_exploration_changed() -> void:
+	_sync_portals()
+	_on_tile_changed(Vector2i(-1, -1))
+	_gold_snapshot = ""
+	_refresh_gold()
 
 
 func _on_tile_changed(cell: Vector2i) -> void:
-	_landmark_dirty = _landmark_dirty or cell == _heart_cell or cell == _portal_cell
+	_landmark_dirty = _landmark_dirty or cell == _heart_cell or _portal_views.has(cell) or _context.grid.get_tile(cell) in [DungeonGrid.Tile.HEART, DungeonGrid.Tile.PORTAL]
 	if not _terrain_dirty:
 		_terrain_dirty = true
 		_apply_terrain_changes.call_deferred()
@@ -324,14 +355,14 @@ func _apply_terrain_changes() -> void:
 
 func _refresh_gold() -> void:
 	var economy := _context.economy
-	var snapshot := str([economy.ground_gold, economy.stored_by_cell, economy.treasury_cells, economy.protected_storage])
+	var snapshot := str([economy.ground_gold, economy.stored_by_cell, economy.treasury_cells, economy.protected_storage, _context.exploration.revealed])
 	if snapshot == _gold_snapshot:
 		return
 	_gold_snapshot = snapshot
 	for child in _gold_root.get_children():
 		child.free()
 	for cell in economy.treasury_cells:
-		if not _context.grid.is_walkable(cell):
+		if not _context.grid.is_walkable(cell) or not _context.exploration.is_revealed(cell):
 			continue
 		if economy.protected_storage.has(cell):
 			_heart_storage_floor(cell)
@@ -339,7 +370,8 @@ func _refresh_gold() -> void:
 		if amount > 0:
 			_storage_prop(cell, amount)
 	for cell in economy.ground_gold:
-		_coin_pile(_context.grid.cell_to_world(cell), economy.ground_gold[cell])
+		if _context.exploration.is_revealed(cell):
+			_coin_pile(_context.grid.cell_to_world(cell), economy.ground_gold[cell])
 
 
 func _storage_prop(cell: Vector2i, amount: int) -> void:

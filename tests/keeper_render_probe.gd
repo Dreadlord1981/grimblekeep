@@ -28,6 +28,7 @@ func _step() -> void:
 
 func _run() -> void:
 	_app = (load("res://scenes/dungeon.tscn") as PackedScene).instantiate()
+	_app.use_development_layout = true
 	_app.set("starting_gold", 0)
 	_app.set("use_heart_storage", false)
 	root.add_child(_app)

@@ -21,7 +21,7 @@ var held_actor: CreatureState:
 		return item.actor if item != null and item.kind == &"creature" and _is_live(item.actor) else null
 var inspected_actor: CreatureState:
 	get:
-		return _inspected if _is_live(_inspected) else null
+		return _inspected if _is_live(_inspected) and _context().is_actor_visible(_inspected) else null
 var held_gold: int:
 	get:
 		var item := peek_item()
@@ -40,7 +40,7 @@ func _init(context: GameContext) -> void:
 
 func inspect(actor_id: int) -> bool:
 	var actor := _find_actor(actor_id)
-	if actor == null:
+	if actor == null or not _context().is_actor_visible(actor):
 		return false
 	if _inspected != actor:
 		_inspected = actor
@@ -72,7 +72,7 @@ func pickup(actor_id: int) -> bool:
 	prune()
 	var context := _context()
 	var actor := _find_actor(actor_id)
-	if context == null or actor == null or actor.is_held or not actor.position.is_finite():
+	if context == null or actor == null or actor.is_held or not actor.position.is_finite() or not context.is_actor_visible(actor):
 		return false
 	for item in _items:
 		if item.kind == &"creature" and item.actor == actor:
@@ -130,7 +130,7 @@ func _new_item(kind: StringName, origin: Vector2i) -> KeeperHandItem:
 func pickup_gold(cell: Vector2i, amount: int = -1) -> bool:
 	prune()
 	var context := _context()
-	if context == null or context.economy.gold_at(cell) <= 0:
+	if context == null or not context.exploration.is_revealed(cell) or context.economy.gold_at(cell) <= 0:
 		return false
 	var taken := context.economy.pickup_for_keeper(cell, amount)
 	if taken <= 0:
@@ -146,6 +146,9 @@ func quote_drop(cell: Vector2i) -> Dictionary:
 	var quote := {"cell": cell, "valid": false, "reason": "The hand is empty"}
 	var context := _context()
 	if not is_holding() or context == null:
+		return quote
+	if not context.exploration.is_revealed(cell):
+		quote.reason = "Explore that area before dropping here"
 		return quote
 	if not context.grid.is_inside(cell) or context.grid.get_tile(cell) != DungeonGrid.Tile.FLOOR:
 		quote.reason = "Drop on excavated dungeon floor"

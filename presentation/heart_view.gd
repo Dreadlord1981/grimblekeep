@@ -59,6 +59,8 @@ func _ready() -> void:
 	_light.light_color = Color("f75b68")
 	_light.light_energy = 1.8
 	_light.omni_range = 8.0
+	_light.shadow_enabled = true
+	_light.shadow_bias = 0.035
 	add_child(_light)
 
 

@@ -7,6 +7,7 @@ var target_cell: Vector2i
 var work_cell: Vector2i
 var terrain_kind: int = -1
 var path: Array[Vector2i] = []
+var provider: WorkerJobProvider
 
 
 func _init(job_kind: StringName = &"", target: Vector2i = Vector2i.ZERO, workplace: Vector2i = Vector2i.ZERO) -> void:

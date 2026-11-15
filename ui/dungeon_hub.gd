@@ -77,6 +77,7 @@ func setup(context: GameContext) -> void:
 	context.food.changed.connect(refresh)
 	context.actor_added.connect(_on_actor_changed)
 	context.actor_removed.connect(_on_actor_changed)
+	context.exploration.changed.connect(refresh)
 	select_tab(&"creatures")
 	refresh()
 
@@ -105,7 +106,7 @@ func refresh() -> void:
 	for id in creature_buttons:
 		var count := 0
 		for actor in _context.actors:
-			if actor.definition_id == id:
+			if actor.definition_id == id and _context.is_actor_visible(actor):
 				count += 1
 		creature_badges[id].text = str(count)
 		creature_buttons[id].visible = count > 0
@@ -120,12 +121,17 @@ func refresh() -> void:
 		var food := 0
 		var food_capacity := 0
 		for room in _context.rooms.get_rooms():
-			if room.definition_id == id:
+			var known_cells: Array[Vector2i] = []
+			for cell in room.cells:
+				if _context.exploration.is_revealed(cell):
+					known_cells.append(cell)
+			if room.definition_id == id and not known_cells.is_empty():
+				var profile := _context.registry.get_room(id)
 				count += 1
-				tiles += room.cells.size()
-				capacity += room.capacity
-				gold_capacity += room.gold_capacity
-				for cell in room.cells:
+				tiles += known_cells.size()
+				capacity += known_cells.size() * profile.capacity_per_tile
+				gold_capacity += known_cells.size() * profile.gold_storage_per_tile
+				for cell in known_cells:
 					gold += _context.economy.stored_by_cell.get(cell, 0)
 					food += _context.food.total_at(cell)
 					if _context.food.sources.has(cell):
@@ -153,6 +159,8 @@ func refresh() -> void:
 			var established := 0
 			var reserved := 0
 			for bed in _context.beds.beds.values():
+				if not _context.exploration.is_revealed(bed.anchor):
+					continue
 				if _context.rooms.tiles.get(bed.anchor, &"") != id:
 					continue
 				if bed.established:
@@ -172,7 +180,7 @@ func _on_actor_changed(_actor: CreatureState) -> void:
 func _inspect_next_species(definition_id: StringName) -> void:
 	var members: Array[CreatureState] = []
 	for actor in _context.actors:
-		if actor.definition_id == definition_id:
+		if actor.definition_id == definition_id and _context.is_actor_visible(actor):
 			members.append(actor)
 	if members.is_empty():
 		return

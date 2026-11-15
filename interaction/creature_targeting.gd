@@ -5,7 +5,7 @@ extends RefCounted
 const INVALID_CELL := Vector2i(-1, -1)
 
 
-static func terrain_hit(grid: DungeonGrid, origin: Vector3, direction: Vector3) -> Dictionary:
+static func terrain_hit(grid: DungeonGrid, origin: Vector3, direction: Vector3, exploration: DungeonExploration = null) -> Dictionary:
 	var result := {"cell": INVALID_CELL, "distance_squared": INF}
 	if grid == null:
 		return result
@@ -14,7 +14,7 @@ static func terrain_hit(grid: DungeonGrid, origin: Vector3, direction: Vector3) 
 		for x in grid.width:
 			var cell := Vector2i(x, y)
 			var center := grid.cell_to_world(cell)
-			var top := grid.surface_height(cell)
+			var top := exploration.surface_height(cell) if exploration != null else grid.surface_height(cell)
 			var bounds := AABB(center + Vector3(-half, -0.1, -half), Vector3(DungeonGrid.TILE_SIZE, top + 0.1, DungeonGrid.TILE_SIZE))
 			var intersection: Variant = bounds.intersects_ray(origin, direction)
 			if intersection == null:
@@ -32,10 +32,10 @@ static func actor_at(context: GameContext, camera: Camera3D, screen: Vector2) ->
 		return null
 	var origin := camera.project_ray_origin(screen)
 	var direction := camera.project_ray_normal(screen)
-	var nearest: float = terrain_hit(context.grid, origin, direction).distance_squared
+	var nearest: float = terrain_hit(context.grid, origin, direction, context.exploration).distance_squared
 	var target: CreatureState
 	for actor in context.actors:
-		if actor.is_held or not actor.position.is_finite():
+		if actor.is_held or not actor.position.is_finite() or not context.is_actor_visible(actor):
 			continue
 		var definition := context.registry.get_creature(actor.definition_id)
 		if definition == null:

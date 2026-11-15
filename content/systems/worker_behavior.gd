@@ -12,6 +12,7 @@ var _context: GameContext
 var _board: WorkerJobBoard
 var _path_index := 0
 var _retry_in := 0.0
+var _priority_check_in := 0.0
 
 
 func _init(game_context: GameContext, board: WorkerJobBoard, creature: CreatureState) -> void:
@@ -30,6 +31,11 @@ func tick(delta: float, definition: CreatureDefinition) -> void:
 		last_safe_cell = current_cell
 	if job != null and not _job_is_valid(definition):
 		cancel()
+	_priority_check_in -= delta
+	if job != null and job.provider != null and job.provider.yields_to_orders(job) and _priority_check_in <= 0.0:
+		_priority_check_in = POLL_SECONDS
+		if _board.has_priority_work(actor, definition):
+			cancel()
 	if job == null:
 		_retry_in -= delta
 		if _retry_in > 0.0:
@@ -37,6 +43,7 @@ func tick(delta: float, definition: CreatureDefinition) -> void:
 		_retry_in = POLL_SECONDS
 		job = _board.assign(actor, definition)
 		_path_index = 0
+		_priority_check_in = 0.0
 		if job == null:
 			_handle_idle(definition)
 			return
@@ -47,7 +54,10 @@ func tick(delta: float, definition: CreatureDefinition) -> void:
 		return
 	if job == null:
 		return
-	if job.kind == &"excavate":
+	if job.provider != null:
+		if job.provider.work(job, actor, definition, delta):
+			cancel()
+	elif job.kind == &"excavate":
 		_work(delta, definition)
 	elif job.kind == &"haul":
 		_pick_up_gold(definition)
@@ -117,8 +127,10 @@ func _handle_idle(definition: CreatureDefinition) -> void:
 func _job_is_valid(definition: CreatureDefinition) -> bool:
 	if not _board.owns(actor.id, job) or not _context.grid.is_walkable(job.work_cell):
 		return false
+	if job.provider != null:
+		return job.provider.is_valid(job, actor, definition)
 	if job.kind == &"excavate":
-		if &"excavate" not in definition.capabilities or not _context.excavation_marks.has(job.target_cell) or _context.grid.get_tile(job.target_cell) != job.terrain_kind or not _context.grid.can_excavate(job.target_cell):
+		if &"excavate" not in definition.capabilities or not _context.excavation_marks.has(job.target_cell) or _context.grid.get_tile(job.target_cell) != job.terrain_kind or not _context.can_execute_excavation(job.target_cell):
 			return false
 		return job.terrain_kind == DungeonGrid.Tile.ROCK or _board.has_reachable_treasury(job.work_cell)
 	if job.kind == &"haul":
@@ -224,6 +236,8 @@ func _nearest_safe_cell() -> Vector2i:
 
 
 func _job_label() -> String:
+	if job.provider != null:
+		return job.provider.label(job)
 	if job.kind == &"deposit":
 		return "Delivering gold to storage"
 	if job.kind == &"haul":

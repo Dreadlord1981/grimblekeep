@@ -12,6 +12,7 @@ func setup(context: GameContext) -> void:
 	_context.beds.changed.connect(_queue_refresh)
 	_context.grid.tile_changed.connect(_on_terrain_changed)
 	_context.excavation_marks_changed.connect(_on_terrain_changed)
+	_context.exploration.changed.connect(_queue_refresh)
 	_refresh()
 
 
@@ -26,6 +27,8 @@ func _refresh() -> void:
 	for child in get_children():
 		child.free()
 	for cell in _context.rooms.tiles:
+		if not _context.exploration.is_revealed(cell):
+			continue
 		var definition := _context.registry.get_room(_context.rooms.tiles[cell])
 		if definition != null:
 			_build_room_tile(cell, definition)
@@ -37,6 +40,11 @@ func _refresh() -> void:
 				_build_pen_perimeter(room, definition)
 	for bed in _context.beds.beds.values():
 		if not bed.established:
+			continue
+		var revealed := true
+		for cell in bed.cells:
+			revealed = revealed and _context.exploration.is_revealed(cell)
+		if not revealed:
 			continue
 		var view := DungeonBedView.new()
 		view.build(bed, _context.grid)
@@ -137,6 +145,8 @@ func _build_pen_perimeter(room: RoomState, definition: RoomDefinition) -> void:
 	var wood := DungeonGeometry.material(definition.accent_color)
 	var gate_placed := false
 	for cell in cells:
+		if not _context.exploration.is_revealed(cell):
+			continue
 		for direction: Vector2i in [Vector2i.UP, Vector2i.LEFT, Vector2i.DOWN, Vector2i.RIGHT]:
 			if members.has(cell + direction) or not _context.grid.is_walkable(cell + direction):
 				continue
@@ -227,9 +237,14 @@ func _build_wall(tile: Node3D, definition: RoomDefinition, direction: Vector2i) 
 
 func _add_room_label(room: RoomState, definition: RoomDefinition) -> void:
 	var center := Vector3.ZERO
+	var visible_cells := 0
 	for cell in room.cells:
-		center += _context.grid.cell_to_world(cell)
-	center /= float(room.cells.size())
+		if _context.exploration.is_revealed(cell):
+			center += _context.grid.cell_to_world(cell)
+			visible_cells += 1
+	if visible_cells == 0:
+		return
+	center /= float(visible_cells)
 	var label := Label3D.new()
 	label.name = "RoomLabel_%s" % room.id
 	label.text = definition.display_name.to_upper()

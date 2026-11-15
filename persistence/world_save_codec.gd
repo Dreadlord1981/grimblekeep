@@ -55,7 +55,8 @@ static func restore(context: GameContext, data: Dictionary, reader: SaveReader) 
 		used[at] = true
 	for item in reader.array(data.get("marks"), "marks"):
 		var at := reader.cell(item, context.grid, "excavation mark")
-		if context.excavation_marks.has(at) or not context.grid.can_excavate(at):
+		# Eligibility depends on restored knowledge, checked by ExplorationSaveCodec.
+		if context.excavation_marks.has(at):
 			reader.fail("Invalid or duplicate excavation mark")
 		context.excavation_marks[at] = true
 	if not context.excavation_marks.is_empty():

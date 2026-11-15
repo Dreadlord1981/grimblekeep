@@ -71,6 +71,8 @@ func _try_arrival() -> void:
 		if population >= definition.portal_population_limit:
 			continue
 		for portal in context.grid.cells_of_type(DungeonGrid.Tile.PORTAL):
+			if not context.infrastructure.is_portal_claimed(portal):
+				continue
 			if context.beds.find_space(definition, portal) == Vector2i(-1, -1):
 				continue
 			var actor := context.spawn_creature(definition.id, portal)

@@ -9,14 +9,16 @@ var tiles: Dictionary[Vector2i, StringName] = {}
 var _grid: DungeonGrid
 var _registry: ContentRegistry
 var _economy: GoldEconomy
+var _exploration: DungeonExploration
 var _groups: Array[RoomState] = []
 var _by_cell: Dictionary[Vector2i, RoomState] = {}
 
 
-func _init(grid: DungeonGrid, registry: ContentRegistry, economy: GoldEconomy) -> void:
+func _init(grid: DungeonGrid, registry: ContentRegistry, economy: GoldEconomy, exploration: DungeonExploration = null) -> void:
 	_grid = grid
 	_registry = registry
 	_economy = economy
+	_exploration = exploration
 	_grid.tile_changed.connect(_on_tile_changed)
 
 
@@ -50,7 +52,7 @@ func quote_build(definition_id: StringName, cells: Array[Vector2i]) -> Dictionar
 func quote_remove(cells: Array[Vector2i]) -> Dictionary:
 	var quote := _empty_quote()
 	for cell in _unique(cells):
-		if tiles.has(cell) and not _economy.protected_storage.has(cell):
+		if tiles.has(cell) and not _economy.protected_storage.has(cell) and (_exploration == null or _exploration.is_revealed(cell)):
 			quote.remove.append(cell)
 			var definition := _registry.get_room(tiles[cell])
 			quote.refund += floori(definition.gold_cost_per_tile * definition.sell_refund_ratio)
@@ -102,7 +104,7 @@ func place_initial(definition_id: StringName, cells: Array[Vector2i]) -> bool:
 		return false
 	var unique := _unique(cells)
 	for cell in unique:
-		if not _can_place(cell):
+		if not _can_place(cell, false):
 			return false
 	for cell in unique:
 		tiles[cell] = definition_id
@@ -118,8 +120,8 @@ func get_room_at(cell: Vector2i) -> RoomState:
 	return _by_cell.get(cell)
 
 
-func _can_place(cell: Vector2i) -> bool:
-	return _grid.is_inside(cell) and _grid.get_tile(cell) == DungeonGrid.Tile.FLOOR and not tiles.has(cell) and not _economy.protected_storage.has(cell)
+func _can_place(cell: Vector2i, require_revealed: bool = true) -> bool:
+	return _grid.is_inside(cell) and _grid.get_tile(cell) == DungeonGrid.Tile.FLOOR and not tiles.has(cell) and not _economy.protected_storage.has(cell) and (not require_revealed or _exploration == null or _exploration.is_revealed(cell))
 
 
 func _empty_quote() -> Dictionary:

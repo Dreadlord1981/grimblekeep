@@ -2,7 +2,7 @@ extends SceneTree
 ## Actual protected Heart bank and mining before any Treasury room exists.
 
 const Layout = preload("res://content/scenarios/foundation_layout.gd")
-const SEAM := Vector2i(8, 12)
+const SEAM := Vector2i(17, 15)
 const STEP := 1.0 / 30.0
 var _checks := 0
 var _failures: Array[String] = []
@@ -134,7 +134,7 @@ func _full_storage() -> void:
 	for tick in 120:
 		app.call("_physics_process", STEP)
 	_check(economy.remaining_gold.get(SEAM, 0) == paused and context.excavation_marks.has(SEAM), "Refilled Heart storage pauses the retained mining order again")
-	var built := context.rooms.build(&"foundation.treasury", [Vector2i(12, 12)])
+	var built := context.rooms.build(&"foundation.treasury", [Vector2i(12, 17)])
 	_check(built.success and built.cost == 50 and economy.treasury_capacity == 4500 and economy.protected_storage.size() == 8, "Player-built Treasury adds capacity alongside protected Heart storage")
 	for tick in 2400:
 		app.call("_physics_process", STEP)
@@ -142,7 +142,7 @@ func _full_storage() -> void:
 		if context.grid.get_tile(SEAM) == DungeonGrid.Tile.FLOOR and context.actors.all(func(actor: CreatureState) -> bool: return actor.carried_gold == 0) and economy.ground_gold.is_empty():
 			break
 	_check(context.grid.get_tile(SEAM) == DungeonGrid.Tile.FLOOR and context.actors.all(func(actor: CreatureState) -> bool: return actor.carried_gold == 0) and economy.ground_gold.is_empty(), "Added Treasury capacity lets workers finish the reserved seam and store all outstanding gold")
-	var sold := context.rooms.remove([Vector2i(12, 12)])
+	var sold := context.rooms.remove([Vector2i(12, 17)])
 	_check(sold.success and economy.treasury_capacity == 4000 and economy.protected_storage.size() == 8, "Selling the added Treasury preserves all eight protected Heart cells")
 	_check(conserved and economy.accounted_gold(context.actors) == initial + economy.gem_gold_created and economy.initial_gold == initial, "Startup, full-storage pauses, spending, expansion and sale conserve supply")
 	app.queue_free()

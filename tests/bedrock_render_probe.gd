@@ -20,6 +20,7 @@ func _check(value: bool, description: String) -> void:
 
 func _run() -> void:
 	_app = (load("res://scenes/dungeon.tscn") as PackedScene).instantiate()
+	_app.use_development_layout = true
 	root.add_child(_app)
 	_app.set_physics_process(false)
 	_context = _app.context

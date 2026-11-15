@@ -34,7 +34,7 @@ func begin(screen: Vector2) -> bool:
 		lift(actor.id)
 		return true
 	var cell := _keeper.get_target_cell(screen)
-	if _context.grid.is_inside(cell) and _context.grid.get_tile(cell) == DungeonGrid.Tile.FLOOR and _context.economy.gold_at(cell) > 0:
+	if _context.exploration.is_revealed(cell) and _context.grid.get_tile(cell) == DungeonGrid.Tile.FLOOR and _context.economy.gold_at(cell) > 0:
 		_left_captured = true
 		is_acting = true
 		var success := _context.keeper.pickup_gold(cell)

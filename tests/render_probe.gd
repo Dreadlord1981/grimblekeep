@@ -8,6 +8,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var app := (load("res://scenes/dungeon.tscn") as PackedScene).instantiate()
+	app.use_development_layout = true
 	root.add_child(app)
 	for i in 60:
 		await process_frame

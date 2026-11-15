@@ -74,6 +74,7 @@ func _sync_units() -> void:
 		var definition := _context.registry.get_food(food.food_id)
 		var node := _units[id]
 		var cell := _context.grid.world_to_cell(food.position)
+		node.visible = _context.exploration.is_revealed(cell)
 		node.position = food.position + Vector3.UP * (0.12 if _context.rooms.tiles.has(cell) else 0.0)
 		node.rotation.y = food.heading
 		var maturity := clampf(food.age_seconds / definition.growth_seconds, 0.0, 1.0) if definition.growth_seconds > 0.0 else 1.0

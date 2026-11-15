@@ -8,6 +8,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var app := (load("res://scenes/dungeon.tscn") as PackedScene).instantiate()
+	app.use_development_layout = true
 	app.starting_gold = 0
 	app.use_heart_storage = false
 	root.add_child(app)

@@ -3,6 +3,7 @@ extends Node3D
 ## Tile feedback only. Reconcile marker nodes when cells change, never every frame.
 
 var grid: DungeonGrid
+var exploration: DungeonExploration
 var marked_frames: Dictionary[Vector2i, Node3D] = {}
 var _add_frames: Dictionary[Vector2i, Node3D] = {}
 var _remove_frames: Dictionary[Vector2i, Node3D] = {}
@@ -84,9 +85,14 @@ func _sync_frames(frames: Dictionary[Vector2i, Node3D], cells: Array[Vector2i], 
 			frames[cell].queue_free()
 			frames.erase(cell)
 	for cell in cells:
+		var height := exploration.surface_height(cell) if exploration != null else grid.surface_height(cell)
 		if not frames.has(cell):
-			frames[cell] = _make_frame(color, thickness, marker, grid.surface_height(cell) if glowing else -1.0)
+			frames[cell] = _make_frame(color, thickness, marker, height if glowing else -1.0)
+		if glowing:
+			var shell := frames[cell].get_node("ExcavationGlow") as MeshInstance3D
+			shell.scale = Vector3(2.01, height + 0.12, 2.01)
+			shell.position.y = -height * 0.5 - 0.04
 		var position_in_world := grid.cell_to_world(cell)
 		# Preview sits above persistent outlines, avoiding overlapping green/red edges.
-		position_in_world.y = grid.surface_height(cell) + (0.05 if marker == 0 else 0.10)
+		position_in_world.y = height + (0.05 if marker == 0 else 0.10)
 		frames[cell].position = position_in_world

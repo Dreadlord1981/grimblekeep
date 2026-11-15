@@ -18,7 +18,7 @@ static func write_save(path: String, data: Dictionary, registry: ContentRegistry
 	var json := JSON.new()
 	if json.parse(encoded) != OK or not json.data is Dictionary:
 		return "Save could not be encoded as JSON"
-	if json.data.get("format") != DungeonSave.FORMAT or json.data.get("version") != DungeonSave.VERSION:
+	if json.data.get("format") != DungeonSave.FORMAT or not DungeonSave.is_supported_version(json.data.get("version")):
 		return "Unsupported save format or version"
 	# Validate the exact JSON round trip before replacing any valid file.
 	if registry != null:
@@ -54,7 +54,7 @@ static func write_save(path: String, data: Dictionary, registry: ContentRegistry
 		var previous_text := FileAccess.get_file_as_string(absolute)
 		var valid_previous := previous_data.parse(previous_text) == OK and previous_data.data is Dictionary
 		if valid_previous:
-			valid_previous = previous_data.data.get("format") == DungeonSave.FORMAT and previous_data.data.get("version") == DungeonSave.VERSION
+			valid_previous = previous_data.data.get("format") == DungeonSave.FORMAT and DungeonSave.is_supported_version(previous_data.data.get("version"))
 		if valid_previous and registry != null:
 			valid_previous = DungeonSave.restore(previous_data.data, registry).error.is_empty()
 		if not valid_previous:

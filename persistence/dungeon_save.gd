@@ -3,7 +3,11 @@ extends RefCounted
 ## Versioned JSON session boundary. Restore constructs a detached candidate only.
 
 const FORMAT := "grimblekeep.dungeon"
-const VERSION := 1
+const VERSION := 2
+
+
+static func is_supported_version(value: Variant) -> bool:
+	return (value is int or value is float) and is_finite(float(value)) and float(value) == floorf(float(value)) and (value == 1 or value == VERSION)
 
 
 static func capture(context: GameContext) -> Dictionary:
@@ -11,6 +15,7 @@ static func capture(context: GameContext) -> Dictionary:
 	result.merge(WorldSaveCodec.capture(context))
 	result.merge(CreatureSaveCodec.capture(context))
 	result["food"] = FoodSaveCodec.capture(context)
+	result.merge(ExplorationSaveCodec.capture(context))
 	return result
 
 
@@ -18,8 +23,11 @@ static func restore(data: Dictionary, registry: ContentRegistry) -> Dictionary:
 	var reader := SaveReader.new()
 	if registry == null:
 		return _failure("No content registry is available")
-	if reader.text(data.get("format"), "save format") != FORMAT or reader.integer(data.get("version"), "save version", 1) != VERSION:
+	var version := reader.integer(data.get("version"), "save version", 1)
+	if reader.text(data.get("format"), "save format") != FORMAT or version not in [1, VERSION]:
 		return _failure("Unsupported save format or version")
+	if version == 1:
+		data = ExplorationSaveCodec.migrate_v1(data)
 	var features := reader.object(data.get("features"), "feature state")
 	var presentation := reader.object(data.get("presentation", {}), "presentation state")
 	var grid := WorldSaveCodec.restore_grid(data, reader)
@@ -27,6 +35,7 @@ static func restore(data: Dictionary, registry: ContentRegistry) -> Dictionary:
 		return _failure(reader.error)
 	var context := GameContext.new(grid, registry)
 	WorldSaveCodec.restore(context, data, reader)
+	ExplorationSaveCodec.restore(context, data, reader)
 	if not reader.error.is_empty():
 		return _failure(reader.error)
 	CreatureSaveCodec.restore(context, data, reader)

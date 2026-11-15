@@ -30,6 +30,37 @@ This is a finite starting bank. Mining pauses when reachable storage is full and
 resumes after spending or expansion. Test fixtures can set `starting_gold=0`;
 `use_heart_storage=false` explicitly selects the older Treasury fixture.
 
+Fresh games now begin in a **5×5 Heart chamber**:24 floor tiles, three imps,
+protected gold around the Heart and nearby seams. The rest needs excavation.
+Fog conceals unknown terrain, resources, rooms and creatures. The exposed dungeon
+wall and four rows beyond it are revealed as you dig; explored areas remain known
+after save/load. Drag entire multi-row excavation plans through the fog. Unknown
+tiles show identical amber plans without exposing their contents. Marks stay until
+discovery: non-diggable tiles then lose their marks, while rock/gold/gems remain
+ordered until dug or cancelled. Building, selling and keeper actions require discovery.
+
+The distant purple **portal beacon** gives you a direction through the darkness.
+Dig a route to it; an imp walks there and claims it before residents can arrive.
+Lair/food requirements still apply. Excavation fits spaced **wall sconces immediately**;
+there is no separate lamp job or delay. Their access tiles stay free for rooms,
+beds and items. Digging a supporting wall removes its fixture and fits lighting
+to valid remaining walls. Room fixtures also use walls, with no floor-post fallback.
+Rooms get lamps at their supported outer corners immediately, even near another
+corridor lamp, so their usable floor stays readable. Corner fixtures update with
+room changes and are filled in for older saves on loading.
+The Heart, lamps, rooms and portal
+provide local lighting with shadows. Lighting and exploration are separate: an
+explored rock stays dim outside nearby light pools. Exact lamp wall faces,
+portal claiming progress/ownership and explored cells all save/load. Earlier floor
+lamps and pending lamp jobs migrate to supported sconces where walls are available.
+Revealed rock has a faint silhouette for planning; this lights no neighboring objects.
+Hidden plans also save/load. Earlier shorter-range version2 saves expand their
+known frontier to the current range on loading, keeping the dungeon and custody intact.
+
+The former open map remains an explicit `use_development_layout=true` fixture.
+Version1 saves retain their terrain, knowledge and operational portals when
+migrated to version2; loading an older dungeon does not shrink its layout.
+
 Use **Save [F5]** and **Load [F9]** below the header. There is one manual slot;
 saving replaces it and loading replaces the current dungeon, including unsaved
 changes. New launches start fresh until you choose Load. Shortcuts pause while

@@ -17,6 +17,8 @@ var rooms: DungeonRooms
 var beds: DungeonBeds
 var food: FoodEconomy
 var keeper: KeeperState
+var exploration: DungeonExploration
+var infrastructure: DungeonInfrastructure
 var last_marked_cell := Vector2i(-1, -1)
 var excavation_marks: Dictionary[Vector2i, bool] = {}
 var hovered_cell := Vector2i(-1, -1)
@@ -37,10 +39,13 @@ func _init(dungeon_grid: DungeonGrid = null, content_registry: ContentRegistry =
 	registry = content_registry
 	economy = GoldEconomy.new(grid)
 	if grid != null:
-		rooms = DungeonRooms.new(grid, registry, economy)
+		exploration = DungeonExploration.new(grid)
+		rooms = DungeonRooms.new(grid, registry, economy, exploration)
 		beds = DungeonBeds.new(grid, rooms, registry)
 		food = FoodEconomy.new(grid, rooms, registry)
 		keeper = KeeperState.new(self)
+		infrastructure = DungeonInfrastructure.new(self)
+		exploration.changed.connect(_prune_revealed_marks)
 		grid.tile_changed.connect(_on_terrain_changed)
 
 
@@ -81,7 +86,7 @@ func mark_excavation(cells: Array[Vector2i], mode: int = MarkOperation.TOGGLE) -
 		excavation_marks.clear()
 	var visited: Dictionary[Vector2i, bool] = {}
 	for cell in cells:
-		if not grid.can_excavate(cell) or visited.has(cell):
+		if not can_designate_excavation(cell) or visited.has(cell):
 			continue
 		visited[cell] = true
 		if mode == MarkOperation.REMOVE or (mode == MarkOperation.TOGGLE and excavation_marks.has(cell)):
@@ -91,14 +96,37 @@ func mark_excavation(cells: Array[Vector2i], mode: int = MarkOperation.TOGGLE) -
 	_emit_marks_changed()
 
 
+func can_designate_excavation(cell: Vector2i) -> bool:
+	# Unknown marks are plans, independent of the concealed terrain underneath.
+	return grid != null and grid.is_inside(cell) and (not exploration.is_revealed(cell) or grid.can_excavate(cell))
+
+
+func can_execute_excavation(cell: Vector2i) -> bool:
+	return grid != null and exploration.is_revealed(cell) and grid.can_excavate(cell)
+
+
+func is_actor_visible(actor: CreatureState) -> bool:
+	return actor != null and actor in actors and (actor.is_held or exploration.is_revealed(grid.world_to_cell(actor.position)))
+
+
 func clear_excavation_marks() -> void:
 	excavation_marks.clear()
 	_emit_marks_changed()
 
 
 func _on_terrain_changed(cell: Vector2i) -> void:
-	if excavation_marks.has(cell) and not grid.can_excavate(cell):
+	if excavation_marks.has(cell) and exploration.is_revealed(cell) and not grid.can_excavate(cell):
 		excavation_marks.erase(cell)
+		_emit_marks_changed()
+
+
+func _prune_revealed_marks() -> void:
+	var dirty := false
+	for cell in excavation_marks.keys():
+		if exploration.is_revealed(cell) and not grid.can_excavate(cell):
+			excavation_marks.erase(cell)
+			dirty = true
+	if dirty:
 		_emit_marks_changed()
 
 

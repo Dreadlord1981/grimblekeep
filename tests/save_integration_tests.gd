@@ -35,6 +35,7 @@ func _settle() -> void:
 
 func _run() -> void:
 	_app = (load("res://scenes/dungeon.tscn") as PackedScene).instantiate()
+	_app.use_development_layout = true
 	_app.save_path = _slot
 	root.add_child(_app)
 	_app.set_physics_process(false)
@@ -139,6 +140,7 @@ func _run() -> void:
 	_check(final.economy.keeper_gold == 0 and final.actors[0].carried_gold == 0 and not final.keeper.is_holding(), "Restored worker deposits its saved cargo and dropped gold is recoverable")
 	# A second process-style app uses only disk, never old actor references.
 	var next_app := (load("res://scenes/dungeon.tscn") as PackedScene).instantiate()
+	next_app.use_development_layout = true
 	next_app.save_path = _slot
 	root.add_child(next_app)
 	next_app.set_physics_process(false)

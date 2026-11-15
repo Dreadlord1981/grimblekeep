@@ -10,10 +10,34 @@ var target_reservations: Dictionary[Vector2i, Dictionary] = {}
 var work_reservations: Dictionary[Vector2i, int] = {}
 var _jobs: Dictionary[int, WorkerJob] = {}
 var _context: GameContext
+var providers: Array[WorkerJobProvider] = []
 
 
 func _init(game_context: GameContext) -> void:
 	_context = game_context
+	providers.append(InfrastructureJobProvider.new(game_context))
+
+
+func supports_worker(definition: CreatureDefinition) -> bool:
+	if definition == null:
+		return false
+	if &"excavate" in definition.capabilities or &"haul" in definition.capabilities:
+		return true
+	for provider in providers:
+		if provider.supports(definition):
+			return true
+	return false
+
+
+func can_reserve_custom(target: Vector2i, workplace: Vector2i, actor_id: int) -> bool:
+	return not target_reservations.has(target) and _work_available(workplace, actor_id)
+
+
+func has_priority_work(actor: CreatureState, definition: CreatureDefinition) -> bool:
+	var start := _context.grid.world_to_cell(actor.position)
+	if &"haul" in definition.capabilities and _find_haul(start, actor.id) != null:
+		return true
+	return &"excavate" in definition.capabilities and _find_excavation(start, actor.id) != null
 
 
 func active_job_count() -> int:
@@ -25,7 +49,7 @@ func job_for(actor_id: int) -> WorkerJob:
 
 
 func assign(actor: CreatureState, definition: CreatureDefinition) -> WorkerJob:
-	if actor.is_held:
+	if actor.is_held or actor.needs_requested:
 		release(actor.id)
 		return null
 	if _jobs.has(actor.id):
@@ -39,11 +63,25 @@ func assign(actor: CreatureState, definition: CreatureDefinition) -> WorkerJob:
 			job = _find_deposit(start, actor.id)
 	elif &"haul" in definition.capabilities:
 		job = _find_haul(start, actor.id)
+	if job == null and actor.carried_gold == 0:
+		job = _find_custom(actor, definition, WorkerJobProvider.Stage.BEFORE_EXCAVATION)
 	if job == null and actor.carried_gold == 0 and &"excavate" in definition.capabilities:
 		job = _find_excavation(start, actor.id)
+	if job == null and actor.carried_gold == 0:
+		job = _find_custom(actor, definition, WorkerJobProvider.Stage.IDLE)
 	if job != null:
 		_reserve(actor.id, job)
 	return job
+
+
+func _find_custom(actor: CreatureState, definition: CreatureDefinition, stage: WorkerJobProvider.Stage) -> WorkerJob:
+	for provider in providers:
+		if not provider.supports(definition):
+			continue
+		var job := provider.find_job(self, actor, definition, stage)
+		if job != null:
+			return job
+	return null
 
 
 func release(actor_id: int) -> void:
@@ -116,7 +154,7 @@ func _find_haul(start: Vector2i, actor_id: int) -> WorkerJob:
 func _find_excavation(start: Vector2i, actor_id: int) -> WorkerJob:
 	var best: WorkerJob
 	for target in _context.excavation_marks:
-		if not _context.grid.can_excavate(target) or not _target_available(target, actor_id):
+		if not _context.can_execute_excavation(target) or not _target_available(target, actor_id):
 			continue
 		for direction in DIRECTIONS:
 			var workplace: Vector2i = target + direction

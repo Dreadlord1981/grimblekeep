@@ -117,7 +117,7 @@ func cancel() -> void:
 
 
 func _has_worker_work(definition: CreatureDefinition) -> bool:
-	return definition != null and (&"excavate" in definition.capabilities or &"haul" in definition.capabilities)
+	return definition != null and (&"work" in definition.capabilities or &"excavate" in definition.capabilities or &"haul" in definition.capabilities)
 
 
 func _make_home(delta: float, definition: CreatureDefinition) -> void:

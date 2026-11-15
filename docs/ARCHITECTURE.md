@@ -392,6 +392,68 @@ ID and per-batch gold. Restored actor references point only into the new session
 
 ## Save/load boundaries
 
+### Exploration, infrastructure and worker extensions
+
+`DungeonExploration` stores persistent revealed cells independently of lighting.
+It derives reachable floor from cardinal Heart exits using the same strict-diagonal
+navigation rule, then exposes the current dungeon wall and four rows beyond it. Terrain
+changes update reachability and add knowledge without erasing previous discovery.
+Excavation execution, room and keeper commands enforce visibility;
+presentation and hub counts also filter unknown contents. Only the portal's beacon
+is deliberately visible before discovery. Isolated rule fixtures may leave exploration
+disabled; the actual compact starting scenario enables it explicitly.
+
+Excavation designation is deliberately different from execution. `can_designate_excavation`
+accepts any in-bounds unknown tile and known diggable terrain; `can_execute_excavation`
+requires a revealed diggable tile. Reveal events prune only now-known non-diggable
+plans. Concealed terrain changes never erase a mark. Ray picking and overlays share
+the uniform fog height, so neither feedback nor eligibility exposes hidden contents.
+Save validation reconstructs knowledge without firing gameplay cleanup before checking
+raw marks; corrupt marks on originally known floor reject, while blind plans on hidden
+floor/bedrock/landmarks are valid. An optional saved radius migrates older shorter-range
+version2 snapshots by validating original knowledge first, then expanding and pruning
+only what enters the new range. Revealed rock has a subtle material base for readable
+planning silhouettes; it casts no environmental light.
+
+`DungeonInfrastructure` owns wall sconces, their supporting faces and portal work. Local
+portal work validates capability, proximity, needs, custody and cargo. Portal claims gate
+recruitment; no territory-claim step is added to ordinary dug floor. Lamps are
+spaced by traversable distance, survive saving and are invalidated if terrain changes.
+An excavation terrain event fits supported sconces synchronously; no later worker
+installation job is needed. `lamps` keys identify access floor cells, not occupied
+floor space; `lamp_walls` maps them to cardinal rock/bedrock support cells. Building
+rooms/beds on the access floor does not remove fixtures. Cutting a support removes
+its fixture, and the same event reconciles sparse replacements on remaining walls.
+Room fixtures derive from room membership and also require actual wall support.
+Outer corner cells receive authoritative fixtures via `ensure_room_corner_lamps()`
+when room membership changes or terrain expands. Corner coverage bypasses ordinary
+corridor spacing; nearby lamps across another wall do not suppress it. Single-tile
+rooms have one unique access cell, not four duplicate fixtures. Unsupported corners
+get no invented wall. Saved old rooms receive missing corner fixtures after validating
+the original payload; already complete modern saves remain idempotent.
+Views never install lamps or claim portals. Optional save mount records preserve exact
+faces; older floor/pending fixtures move to nearest valid known support on loading,
+or are discarded if no support exists, with no economic/creature changes.
+
+`WorkerJobProvider` supplies optional jobs to the existing shared board, reservations
+and route follower. Providers implement discovery stages, validity, local work,
+label/progress and optional yielding to new orders. Carrying/deposit and loose gold
+remain priorities; reachable portal claiming precedes excavation. Lamp fitting has
+no worker assignment and does not delay digging/hauling. Optional
+specialists use a generic `work` capability for resident/work arbitration. A test-only
+provider verifies extension without core species switches or a second movement owner.
+
+`starting_layout.gd` creates the small player start; `foundation_layout.gd` remains
+the explicit development fixture. Saves contain terrain, so loading never reapplies
+a scenario or grants another bank. Version2 stores exploration/infrastructure via
+their own codec. The version1 migration retains the old fully known map, physical
+state and already-operational portals. Unknown future versions still reject.
+
+Darkness uses local shadowed lamps/Heart/room/portal lights and minimal ambient light.
+Terrain uses spatial batches to respect Compatibility renderer per-mesh light limits.
+Opaque uniform fog substitutes for unknown tile geometry; tall actors, room labels,
+food, beds and gold also explicitly hide rather than relying only on that surface.
+
 `DungeonSave.capture(context)` creates JSON-compatible data; `restore(data, registry)`
 returns a detached validated context or an error. The versioned facade delegates
 to world/gold, creature/bed/keeper and food codecs. Definitions resolve through the
@@ -421,8 +483,8 @@ replacement and retains a `.bak`; failed operations report errors without discar
 the last good data. A missing primary can load the backup after an interrupted
 replacement. This does not promise filesystem durability under hardware/power loss.
 The app passes the registry for full preflight, including validation after exact JSON
-encoding. There is one manual `user://saves/dungeon.json` slot, no autosave or migration
-from future versions. Camera state is presentation data and has its own validator.
+encoding. There is one manual `user://saves/dungeon.json` slot and no autosave. Version1
+migrates to version2; future versions reject. Camera state has its own validator.
 
 ## Room art and desktop icon controls
 

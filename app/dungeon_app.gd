@@ -1,9 +1,11 @@
 extends Node3D
 ## Composition root: load content, create session, attach independent views/input.
 
-const Layout = preload("res://content/scenarios/foundation_layout.gd")
+const Layout = preload("res://content/scenarios/starting_layout.gd")
+const DevelopmentLayout = preload("res://content/scenarios/foundation_layout.gd")
 @export var starting_gold: int = 3000
 @export var use_heart_storage: bool = true
+@export var use_development_layout: bool = false
 const DEFAULT_SAVE_PATH := "user://saves/dungeon.json"
 var save_path: String = DEFAULT_SAVE_PATH
 var context: GameContext
@@ -25,9 +27,14 @@ func _ready() -> void:
 			get_tree().quit(1)
 			return
 		_modules.append(module)
-	context = GameContext.new(Layout.create(), registry)
-	Layout.setup_rooms(context, starting_gold, use_heart_storage)
-	for cell in [Vector2i(12, 16), Vector2i(16, 14), Vector2i(7, 15)]:
+	var development := use_development_layout or not use_heart_storage
+	context = GameContext.new(DevelopmentLayout.create() if development else Layout.create(), registry)
+	if development:
+		DevelopmentLayout.setup_rooms(context, starting_gold, use_heart_storage)
+	else:
+		Layout.setup_rooms(context, starting_gold)
+	var workers: Array = [Vector2i(12, 16), Vector2i(16, 14), Vector2i(7, 15)] if development else Layout.WORKERS
+	for cell: Vector2i in workers:
 		context.spawn_creature(&"foundation.imp", cell)
 	_features = _create_features(context)
 	_attach_session()

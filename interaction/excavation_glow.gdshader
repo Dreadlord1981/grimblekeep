@@ -1,7 +1,9 @@
 shader_type spatial;
-render_mode unshaded, blend_add, depth_draw_never, cull_back, shadows_disabled;
+render_mode unshaded, blend_mix, depth_draw_never, cull_back, shadows_disabled;
 
 uniform vec4 glow_color : source_color = vec4(1.0, 0.46, 0.07, 1.0);
+uniform float face_opacity : hint_range(0.0, 0.08) = 0.035;
+uniform float edge_opacity : hint_range(0.0, 0.3) = 0.24;
 varying vec3 local_vertex;
 varying vec3 local_normal;
 
@@ -22,5 +24,7 @@ void fragment() {
 	float edge_halo = exp(-pow((distance_to_edge - 0.94) * 11.0, 2.0));
 	float pulse = 0.83 + 0.17 * sin(TIME * 2.3);
 	ALBEDO = glow_color.rgb;
-	ALPHA = (0.12 + edge_halo * 0.38) * pulse;
+	// Bound the tint independently of brightness beneath it. The opaque frame
+	// supplies the strongest outline; the shell must leave terrain readable.
+	ALPHA = clamp((face_opacity + edge_halo * edge_opacity) * pulse, 0.0, 0.3);
 }

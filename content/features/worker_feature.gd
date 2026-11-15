@@ -43,7 +43,7 @@ func tick(delta: float) -> void:
 		if actor.is_held:
 			continue
 		var definition := context.registry.get_creature(actor.definition_id)
-		if definition == null or not (&"excavate" in definition.capabilities or &"haul" in definition.capabilities):
+		if not job_board.supports_worker(definition):
 			if behaviors.has(actor.id):
 				behaviors[actor.id].cancel()
 				# Keep tracking cargo if a capability change coincides with every

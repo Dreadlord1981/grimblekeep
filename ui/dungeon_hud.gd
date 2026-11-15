@@ -378,6 +378,8 @@ func _refresh_economy_and_workers() -> void:
 	var ground := 0
 	var visible_workers: Dictionary[int, bool] = {}
 	for actor in context.actors:
+		if not context.is_actor_visible(actor):
+			continue
 		carried += actor.carried_gold
 		var definition: CreatureDefinition = context.registry.get_creature(actor.definition_id) if context.registry != null else null
 		if definition == null or not (&"excavate" in definition.capabilities or &"haul" in definition.capabilities):
@@ -407,7 +409,11 @@ func _refresh_economy_and_workers() -> void:
 
 func _refresh_food() -> void:
 	if _food_count != null and context != null:
-		_food_count.text = "FOOD   %d" % context.food.total_units
+		var known_food := 0
+		for cell in context.food.stock:
+			if context.exploration.is_revealed(cell):
+				known_food += context.food.total_at(cell)
+		_food_count.text = "FOOD   %d" % known_food
 
 
 func _refresh_residents() -> void:
@@ -415,6 +421,8 @@ func _refresh_residents() -> void:
 		return
 	var visible_residents: Dictionary[int, bool] = {}
 	for actor in context.actors:
+		if not context.is_actor_visible(actor):
+			continue
 		var definition := context.registry.get_creature(actor.definition_id) if context.registry != null else null
 		if definition == null or not (&"rest" in definition.capabilities or &"eat" in definition.capabilities):
 			continue
