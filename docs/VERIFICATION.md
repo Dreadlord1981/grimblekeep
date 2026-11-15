@@ -1,11 +1,94 @@
 # Grimblekeep verification — 2026-11-15
 
 Foundation, workers, Treasury Build/Sell and the first Grubbin/Lair rest loop are
-verified locally with independent review. Food/mood/wages, a second species,
+verified locally with independent review. M3B adds verified Pig Pen production,
+growth, roaming and eating, plus a 3,000-gold playtest start. Mood/wages, a second species,
 keeper pickup/drop, leveling and saving remain pending. Earlier sections below
 the current checkpoint retain their historical counts and scope.
 
-## Indestructible bedrock and Lair icon — current verification
+## Pig Pen food loop and funded playtest start — current verification
+
+Final `tools/dev.ps1 check`: **82 scripts, zero failures**. Final full
+`tools/dev.ps1 test`: **1,571 checks, zero failures** (earlier1,249 plus food28,
+feeding138, food UI27, independent food45, pig life67, starting gold17).
+Lead independently ran the complete suite. `tests/food_render_probe.gd` passed
+**31 GPU checks**, independently rerun by the lead. Code and rendered output
+received separate independent reviews; no blocking findings remain.
+
+The first implementation passed 78 script validations, 1,463 headless checks and
+27 GPU checks. The user then requested growing piglets, room-wide roaming, outer
+fences and one pig per three tiles, with a corrected minimum of 3x1 (or 1x3),
+superseding the intermediate 3x3 suggestion. The final counts above include those
+corrections; the initial counts alone do not verify them.
+
+Food checks cover atomic definition registration and references, independent
+fruit/fungus producers, dietary compatibility, appetite-scaled nutrition, bounded
+production, no full-source backlog, source replacement and mixed stock. Selling
+or blocking a source preserves accounted food. Exclusive meals consume locally
+exactly once; actor removal, diet changes and inaccessible routes release targets.
+Prepared-food definitions with zero automatic production exercise the future
+explicit-output API without implementing cooking, ingredients or Dining Hall jobs.
+
+The final model uses stable food-unit IDs, age and authoritative position. Pooled
+room capacity counts all stock on member cells; minimum footprints allow rotation.
+Piglets grow over 30 simulation seconds, roam their connected room and return for
+reserved meals. Both the pig and eater must be present before eating progresses.
+Independent feeding checks include waiting for a moving pig, displacement during
+eating, exact-ID removal and retained reservations without early nutrition.
+
+UI checks use real Godot Viewport input to choose/build the Pig Pen, spend stored
+gold, update actual stock/capacity tooltips, preserve the clean tabbed hub, and
+display satiety/eating in F3, including food-only species without bed requirements.
+The GPU scenario builds actual rooms, advances ordinary production and needs,
+observes repeated meals/rest/wake and compares visible food against the ledger.
+Food ages/positions are driven by simulation, not rendering or test-only timers.
+
+Independent review found a retained meal could ignore a newly sealed route; the
+ledger now rechecks reachability before retaining it. Roaming review also checks
+that cached room components cannot be reused for a different food type after
+source replacement. Both fixes have passing independent regression checks.
+
+The GPU harness builds a minimum 3x1 pen through Viewport controls, extends it to
+3x2 and tracks the same pig through newborn, juvenile and adult renders. One pig
+visits all six cells with speed-bounded movement and remains in its connected
+room. Fences cover only outer edges, with one gate and no internal rails. Actual
+simulation observes three meals in two feeding trips and a rest/wake cycle.
+Selling the pen immediately preserves exact IDs; subsequent ordinary eating may
+reduce that retained stock, while births stop and conservation holds. Final run:
+four produced, four consumed, zero remaining after continued post-sale eating.
+
+The funded app start has exactly 3,000 gold in six real 500-capacity Treasury
+tiles. Seventeen startup checks verify initial supply includes the finite bank,
+ticks/feature reloads do not repeat it, full storage pauses mineral work, room
+spending frees capacity, and workers resume and refill it without creating gold.
+Mining-only rule and GPU fixtures explicitly opt out with `starting_gold=0`;
+the legacy scene integration fixture was updated because full storage correctly
+prevented its marked gold job from moving workers. A fresh default GPU capture
+(`artifacts/foundation.png`) visibly shows `GOLD 3000 / 3000` and six large chests.
+No standalone export validation is implied by startup checks.
+
+Final local artifacts include `pig-pen-empty.png`,
+`pig-pen-full.png`, `pig-pen-minimum-3x1.png`, `piglet-newborn.png`,
+`piglet-growing.png`, `pig-grown-adult.png`, `cave-pigs-roaming-a.png`,
+`cave-pigs-roaming-b.png`, `pig-returning-to-feed.png`, `grubbin-eating.png`,
+`pig-pen-sold-stock-retained.png`,
+`food-loop-resting.png` and `food-loop-overview.png`. They are ignored evidence,
+not distributed runtime assets. Pig meshes, room dressing and icons are original
+procedural/code-authored assets. There is no starvation damage, mood, wage,
+cooking, second-species or save implementation; portal attraction remains bed-gated.
+
+## Blender tooling
+
+Verified Blender 5.3.0 at
+`C:\Program Files\Blender Foundation\Blender 5.3\blender.exe` with `--version` and
+`--background --factory-startup --python-expr` importing `bpy` and printing its
+version. Both exited 0; no document or UI window was created. User `BLENDER_EXE`
+points to that executable and user PATH includes its installation directory,
+preserving other entries. Already-open shells need reopening or an explicit read
+of the user environment. Asset creation/export/import in Blender remains future
+work; this check verifies executable and background Python access only.
+
+## Indestructible bedrock and Lair icon — earlier baseline
 
 `tools/dev.ps1 check`: **64 scripts, zero failures**. Full `tools/dev.ps1 test`
 passes the earlier 1,176 checks plus 73 independent bedrock checks:

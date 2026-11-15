@@ -62,6 +62,10 @@ func setup(context: GameContext) -> void:
 	rooms.name = "Rooms"
 	add_child(rooms)
 	rooms.setup(_context)
+	var food := DungeonFoodView.new()
+	food.name = "PhysicalFood"
+	add_child(food)
+	food.setup(_context)
 	_build_lighting()
 	_build_terrain()
 	_build_landmarks()

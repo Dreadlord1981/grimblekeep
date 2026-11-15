@@ -16,11 +16,13 @@ presentation/input/UI nodes. Keep orchestration here; gameplay rules live elsewh
 
 ## Add a creature or room
 
-Create a `CreatureDefinition` or `RoomDefinition` resource with a unique namespaced
+Create a `CreatureDefinition`, `RoomDefinition` or `FoodDefinition` resource with a unique namespaced
 ID such as `marsh.mossling` or `marsh.nest`. Add it to a `ContentModule` resource's
 `definitions` array, then add the manifest path to `grimblekeep/content_modules` in
-`project.godot`. Registration rejects duplicates across creatures/rooms, invalid
-values and unsupported types, and commits a manifest only after all entries pass.
+`project.godot`. Registration rejects duplicates across all definition types, invalid
+values, unknown room food references and unsupported types, and commits a manifest
+only after all entries pass. Food references can target the same manifest in any
+definition order, or an already registered manifest.
 
 Definitions are treated as read-only at runtime; state belongs to individual actors
 or the dungeon. Register during startup, before creating views. Hot-loading,
@@ -30,8 +32,8 @@ Creatures may supply an optional `view_scene` (Node3D root). Otherwise they use 
 foundation placeholder renderer with definition color/scale. The view follows
 `CreatureState.position`, `heading` and `phase`. Room definitions drive build
 buttons, placement cost, sale ratio, capacity, paving and optional per-tile
-`view_scene` (Node3D root). Set `buildable=false` for unreleased definitions such
-as the provisional Lair. Registering a room does not implement its specialist
+`view_scene` (Node3D root). Set `buildable=false` for unreleased definitions.
+Registering a room does not implement its specialist
 needs/production behavior; those can use a feature observing `context.rooms`.
 
 ## Add a mechanic
@@ -190,12 +192,20 @@ small/large chest thresholds. New room mechanics can observe this state through
 feature modules. Independent tests build a new room and storage type, including
 their toolbar entries, without adding ID switches to core or presentation.
 
+Fresh app scenes set `starting_gold=3000` for the user's room playtesting. The
+layout adds two Treasury tiles to the earlier four-cell start, deposits the bank
+into real 500-capacity cells and includes it in `initial_gold` alongside finite
+seams. This happens once during scenario initialization. No Heart/portal income
+is introduced. The layout helper defaults to zero, and finite mining/GPU fixtures
+set the app property to zero before adding the scene to the tree.
+
 ## Residents, personal beds and rest ownership
 
 `CreatureDefinition` supplies `bed_size`, `rest_room_tag`, normalized initial
 energy, drain/recovery rates and sleep/wake thresholds. Only creatures with the
-`rest` capability participate. `food_per_meal` and `wage_gold` are future species
-requirements, not active consumers. Zero `portal_population_limit` disables
+`rest` capability participate in rest; `eat` independently enables hunger.
+`food_per_meal` scales nutrition by appetite; `wage_gold` is future data with no
+active payment system. Zero `portal_population_limit` disables
 automatic arrivals; the first Grubbin definition currently limits arrivals to one.
 
 `DungeonBeds` owns personal `BedState` objects by actor ID. It fits every cell of
@@ -218,13 +228,15 @@ scanning cells.
 `ResidentFeature` handles existing residents before scanning portals for a free,
 reachable fitting bed. A bounded arrival scan creates at most one actor, reserves
 pending space immediately and rolls back a failed spawn reservation. No arrival
-creates gold. `ResidentBehavior` handles exploration, fatigue, travel, sleeping and
-waking using strict A* edge validation and world-distance movement. Even-size beds
+creates gold or food. `ResidentBehavior` arbitrates home, hunger, rest and work;
+`ResidentFeeding` owns eating, while `ResidentNavigation` shares strict A* edge
+validation and world-distance movement. Even-size beds
 use their actual center, reached through validated floor before the final segment.
 No bed/path means bounded retries and an explicit unmet-bed state, not wall crossing.
 
-The manifest ticks resident needs **before** worker jobs. `rest_requested` gives
-rest control of movement while traveling/sleeping or seeking a needed bed. A
+The manifest ticks food production, resident needs, then worker jobs.
+`needs_requested` derives from `rest_requested or food_requested`, giving needs
+control while traveling, sleeping, eating or seeking a needed bed. A
 multi-talent awake worker keeps its work behavior; rest only updates its needs.
 When rest takes priority, `WorkerFeature` releases the current job reservation,
 retains cargo and preserves resident action/target state. It resumes ordinary work
@@ -233,7 +245,56 @@ ownership contract or deliberately extend it with reviewed arbitration.
 
 `GameContext.despawn_creature()` releases beds and retains carried gold in the
 economy until a worker can safely recover it. The worker feature clears this
-pending entry after recovery, including feature reloads.
+pending entry after recovery, including feature reloads. Despawning releases meal
+reservations as well as bed space.
+
+## Physical food and producer extension
+
+`FoodDefinition` supplies tags, nutrition, color and an optional Node3D `view_scene`.
+`RoomDefinition.food_type`, `food_capacity_per_tile` and `food_production_seconds`
+describe physical output/storage. A positive interval enables automatic production;
+zero means storage/output only. `FoodFeature` creates bounded output through
+`context.food.produce()`, without room-ID switches. Full sources discard timer
+backlog. Source state retains partial progress through harmless room merges.
+
+An optional positive `food_tiles_per_unit` pools capacity and one production clock
+across each connected room. `food_minimum_size` must fit, allowing rotation. The
+Pig Pen requires 3x1, supports floor(tile count / 3) pigs and produces one per 12
+seconds. Other producers retain per-tile storage by default. Source `cells` track
+the full pool, so old stock on any member tile counts against its shared limit.
+Shrinking a room never deletes food; excess stock pauses births until space exists.
+
+`FoodEconomy` owns per-cell/per-food stock, source capacity, production/consumption
+counters and exclusive meal reservations. Stable `FoodUnitState` IDs identify each
+unit, with allocation cell, authoritative position/heading and bounded simulation
+age. Only produce/consume change unit membership and matching quantity balances.
+The invariant is `stock + consumed = produced`, including per-food counters.
+Selling/replacing a source retains stock; blocked stock stays accounted.
+
+`FoodRoaming` moves enabled food units within their connected producer area using
+strict corner rules. Positions and age belong to simulation, not rendered frames.
+Reserved pigs return to their feeding cell; `meal_ready()` and `consume()` enforce
+that the exact pig and eater are both present before a local debit. One eater
+reserves a feeding cell at a time. Reservation alone consumes nothing. Consumption
+removes that exact ID once and returns nutrition divided by species appetite.
+Growth scales the view from newborn to adult without changing nutrition.
+
+Species set `food_tags` (any matching tag, empty accepts any food), normalized
+satiety, drain/trigger/sated thresholds and local eating duration. The need flag
+persists until sated. Home establishment comes first; active feeding completes,
+critical hunger may wake a sleeper only after reserving reachable food, then rest
+and ordinary hunger follow. Missing food uses bounded retries and permits rest or
+work to continue; no starvation damage, mood or wage effects exist yet. Portal
+recruitment remains gated by reachable fitting bed space, not food.
+
+Independent extension tests add fruit/fungus producers and diets, larger appetites,
+and a prepared-food definition with zero automatic production. A later cook can
+use explicit output production, but ingredient debits, cook jobs and Dining Hall
+service need their own reviewed contracts; they are not implemented now.
+
+`FoodView` follows stable unit IDs and instantiates the definition's scene per unit,
+with a generic fallback. Cave pig motion is not resident AI: food cannot inflate
+creature counts. Reservation changes preserve existing view nodes and growth.
 
 ## Room art and desktop icon controls
 
@@ -257,7 +318,9 @@ capacity/stock and pending/established beds. `ui/dungeon_hub.gd` owns these card
 and publishes tab/tool intents; it does not run simulation. Switching to Creatures
 cancels construction while preserving dig marks. No fixed right sidebar or verbose
 footer remains. Individual energy/work/bed cards and controls live in the hidden
-F3 debug window; concise construction quotes follow the cursor. Original SVG assets
+F3 debug window, including satiety/eating when supported; concise construction
+quotes follow the cursor. The header shows food stock and producer tooltips show
+capacity. Original SVG assets
 in `assets/ui` supply replaceable icons. A
 right-click during construction cancels pending drag before GUI consumption and
 returns to excavation; default RMB camera orbit remains outside construction.
@@ -269,8 +332,9 @@ small changing displays, not expensive actor logic every frame.
 
 The module list is an explicit trusted composition order, not a dependency resolver.
 Initial actor spawns and terrain belong to the replaceable foundation scenario.
-Adding a new species does not imply automatic portal recruitment: attraction arrives
-in Milestone 3. Core contracts can evolve when required, with regression coverage.
+Adding a new species does not imply automatic portal recruitment: configure its
+population limit and bed requirements. Core contracts can evolve when required,
+with regression coverage.
 
 ## Review expectations
 
@@ -282,5 +346,9 @@ registration rollback, unknown references, coordinates and wandering safety.
 Art baseline: 2 world units per tile; workers approximately 1–1.5 units tall;
 chunky low-poly procedural meshes with a limited earthy palette. No textures or
 external asset licenses are required for these original code-generated placeholders.
+Blender 5.3 is available through user `BLENDER_EXE` and PATH. Future authored
+models/animations should retain editable sources, export game-ready assets such
+as GLB, document provenance, and pass the same in-Godot scale/animation/readability
+review before replacing a procedural scene. No current asset was authored in Blender.
 Target 60 FPS at 1280x800 with the small foundation map on the development machine;
 record observed performance separately, not as a guarantee for larger dungeons.

@@ -123,12 +123,13 @@ func sync(actor: CreatureState) -> void:
 	rotation.y = actor.heading
 	var sleeping := actor.action == &"sleeping"
 	var claiming := actor.action == &"claiming_bed"
-	set_meta("pose", &"sleeping" if sleeping else (&"claiming_bed" if claiming else (&"walking" if _still_for < 0.15 else &"idle")))
+	var eating := actor.action == &"eating"
+	set_meta("pose", &"sleeping" if sleeping else (&"eating" if eating else (&"claiming_bed" if claiming else (&"walking" if _still_for < 0.15 else &"idle"))))
 	var stride := sin(actor.phase) * clampf(1.0 - _still_for / 0.15, 0.0, 1.0)
 	_body.position = Vector3(0, _bed_lift(actor) + absf(stride) * 0.035, 0)
 	_body.rotation = Vector3(0.035, 0, stride * 0.055)
 	_body.scale = Vector3(0.90, 0.90 + sin(_time * 1.7) * 0.007, 0.90)
-	_head.rotation.z = sin(_time * 0.8) * 0.025
+	_head.rotation = Vector3(0, 0, sin(_time * 0.8) * 0.025)
 	_left_leg.rotation.x = stride * 0.32
 	_right_leg.rotation.x = -stride * 0.32
 	_left_arm.rotation = Vector3(-stride * 0.18, 0, -0.05)
@@ -150,6 +151,12 @@ func sync(actor: CreatureState) -> void:
 		_right_leg.rotation.x = 0.65
 		_right_arm.rotation.x = -0.40 + sin(_time * 8.0) * 0.16
 		_left_arm.rotation.x = -0.25
+	elif eating:
+		_body.rotation.x = 0.10
+		_head.rotation.x = sin(_time * 6.0) * 0.04
+		_right_arm.rotation.x = -1.55 + sin(_time * 4.0) * 0.18
+		_left_arm.rotation.x = -1.1
+		_left_arm.rotation.z = -0.25
 
 
 func _bed_lift(actor: CreatureState) -> float:

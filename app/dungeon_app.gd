@@ -2,6 +2,7 @@ extends Node3D
 ## Composition root: load content, create session, attach independent views/input.
 
 const Layout = preload("res://content/scenarios/foundation_layout.gd")
+@export var starting_gold: int = 3000
 var context: GameContext
 var controller: KeeperController
 var _features: Array[GameFeature] = []
@@ -21,7 +22,7 @@ func _ready() -> void:
 			return
 		modules.append(module)
 	context = GameContext.new(Layout.create(), registry)
-	Layout.setup_rooms(context)
+	Layout.setup_rooms(context, starting_gold)
 	for cell in [Vector2i(12, 16), Vector2i(16, 14), Vector2i(7, 15)]:
 		context.spawn_creature(&"foundation.imp", cell)
 	for module in modules:
@@ -41,7 +42,7 @@ func _ready() -> void:
 	hud.setup(context, controller)
 	if "--capture" in OS.get_cmdline_user_args():
 		_capture_frame = 90
-	print("GRIMBLEKEEP ready | modules=%d | actors=%d | milestone=3-lair" % [registry.module_count(), context.actors.size()])
+	print("GRIMBLEKEEP ready | modules=%d | actors=%d | milestone=3-food" % [registry.module_count(), context.actors.size()])
 
 
 func _physics_process(delta: float) -> void:

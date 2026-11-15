@@ -25,7 +25,8 @@ reserving room capacity from a portal does not create a bed remotely.
 
 The first species uses a one-tile bed. Future species can need larger rectangular
 spaces, larger meals and different gold wages. Food and wage values are provisional
-design requirements; M3A implements only beds, energy and rest.
+design requirements. M3A implements beds, energy and rest; M3B adds appetite,
+hunger and local eating. Wages remain unimplemented.
 
 ## A dungeon community of specialists
 
@@ -35,7 +36,8 @@ some cook, some craft doors or room machinery, and suitable creatures fight.
 Not every creature is a combatant. Roles are capabilities and may overlap; new
 species should not require a fixed civilian/soldier class hierarchy.
 
-Basic Hatchery/Pig Pen food will be edible directly. A later Dining Hall can combine
+The user chose the Pig Pen: its cave pigs are edible directly. Piglets grow and
+roam the pen, and hungry Grubbins visit them to eat. A later Dining Hall can combine
 cooking stations and tables, turning basic food into more satisfying meals and
 improving mood. Exact yields, labor, wages and species talents remain to be tested.
 No additional wood or stone inventory currencies are agreed.
@@ -44,5 +46,5 @@ No additional wood or stone inventory currencies are agreed.
 
 The keeper's identity, the Heart's deeper meaning, portal destinations, the wider
 world and first specialist professions remain open. So do the second resident
-species, final food-room theme and combat rules. Do not invent these as settled
+species, the wider food culture and combat rules. Do not invent these as settled
 canon or implement their mechanics merely because they are mentioned here.

@@ -15,3 +15,8 @@ var carried_gold: int = 0
 var energy: float = 1.0
 ## Needs run before work features; work yields while rest owns movement.
 var rest_requested: bool = false
+var satiety: float = 1.0
+var food_requested: bool = false
+var needs_requested: bool:
+	get:
+		return rest_requested or food_requested

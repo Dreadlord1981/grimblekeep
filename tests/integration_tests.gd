@@ -18,6 +18,8 @@ func _check(value: bool, description: String) -> void:
 func _run() -> void:
 	var scene := load("res://scenes/dungeon.tscn") as PackedScene
 	var app := scene.instantiate()
+	# Exercise the mining loop with free storage; the funded start has its own test.
+	app.starting_gold = 0
 	root.add_child(app)
 	await process_frame
 	await process_frame

@@ -1,11 +1,11 @@
 # Grimblekeep — shared development checklist
 
-Status: M3A follow-ups and indestructible bedrock verified locally, including a clearer Lair bed icon (2026-11-15). Full pet-dungeon milestone remains open.
+Status: M3B Pig Pen production, growth, roaming, hunger/eating and 3,000-gold playtest start accepted (2026-11-15). Full pet-dungeon milestone remains open.
 Updated: 2026-11-15
 
 ## How to use this plan
 
-- User approved the Grubbin/Lair concept and asked to try it, adding recognizable room wall/floor art, icon-led controls and right-click construction cancellation. M3A is verified and ready to playtest. Species bed sizes, food amounts and wage requirements are data; active food/wages, cooking, crafting, doors/machines and XP follow later packages.
+- User chose the Pig Pen and authorized food production plus hunger/eating, keeping the Dining Hall and cooks for later. Implement M3B as a complete producer/physical-food/local-meal loop with reservations and conservation. Wages, crafting, combat, XP, a second species and saving remain separate work.
 - Read this file and `AGENTS.md` before starting work.
 - Work toward the current milestone. Keep the game playable as systems are added.
 - Use `[ ]` for pending work and `[x]` only for work verified against its acceptance criteria.
@@ -212,11 +212,12 @@ Evidence: 48 scripts validate and 870 automated checks pass, including 42 room r
 
 - [x] M3A: one Grubbin can arrive through a reachable portal after a fitting personal Lair bed becomes available, explore, tire, sleep and wake repeatedly. Species data supports larger footprints; first Grubbin population is capped at one for this prototype.
 - [x] Add recognizable room floor and rock-wall dressing, original procedural Grubbin/cots, icon-led room choices/creature cards and safe right-click Build/Sell cancellation. Preserve mineral readability and amber excavation top/side glow.
+- [x] M3B: build Pig Pens with a 3x1 or rotated minimum and one pig per three connected tiles. Pigs grow, roam their fenced enclosure, meet hungry Grubbins locally and are consumed exactly once. Preserve food through room edits and verify repeated eat/rest cycles with independent code/visual review.
 - [ ] Define rooms and species through data with explicit attraction requirements.
 - [ ] Spawn residents through a connected portal only when requirements and capacity allow.
-- [ ] Implement full hunger/energy/mood action choice. M3A energy/rest/exploration is verified; hunger and mood remain pending.
-- [ ] Complete target reservation across beds and food. Personal bed footprints and release/recovery are verified; food targets remain pending.
-- [ ] Complete food production, eating and sleeping. M3A sleeping works; food production/eating remain pending.
+- [ ] Implement full hunger/energy/mood action choice. Hunger, energy, rest and work arbitration are verified; mood remains pending.
+- [x] Complete target reservation across beds and food, including exact food identity, physical meeting, release and interruption recovery.
+- [x] Complete basic food production, eating and sleeping for the first species, with repeated cycles and conserved stock. Cooking and richer needs remain separate work.
 - [ ] Add two species with distinguishable silhouettes, preferences and behavior.
 - [ ] Inspect/name residents and display their current action and needs.
 - [ ] Pick up eligible friendly creatures with the keeper hand and drop them on valid accessible dungeon floor; invalid drops keep them held and show why.
@@ -224,7 +225,7 @@ Evidence: 48 scripts validate and 870 automated checks pass, including 42 room r
 
 Gate: expanding the dungeon changes which species can arrive; residents repeatedly satisfy needs without starvation loops, reservation leaks or becoming stuck. Keeper-hand pickup/drop works across camera views, respects placement rules and leaves creature/job state consistent.
 
-M3A evidence: 59 scripts validate and 1,039 checks pass (including 24 bed contracts, 89 resident behavior checks, 20 resident UI checks and 32 independent edge cases). GPU probe passes 20 boolean conditions plus two full sleep entries/wake/recovery, with Viewport construction and inspected walking/sleeping/awake/departure frames. Full Milestone 3 is not complete: food/mood, second species and keeper pickup/drop remain open.
+M3A evidence: 59 scripts validate and 1,039 checks pass (including 24 bed contracts, 89 resident behavior checks, 20 resident UI checks and 32 independent edge cases). GPU probe passes 20 boolean conditions plus two full sleep entries/wake/recovery, with Viewport construction and inspected walking/sleeping/awake/departure frames. M3B follow-up adds verified hunger/food: 81 scripts, 1,554 headless checks and 31 GPU checks before the starting-gold follow-up. Full Milestone 3 remains open: mood, second species, broader attraction and keeper pickup/drop are pending.
 
 ### 4. Persistence and robustness
 
@@ -269,6 +270,8 @@ Gate: exported build supports the complete loop with cohesive presentation, reli
 
 ## Active assignments
 
+- M3B accepted: lead implemented food definitions, ledger, stable units/age, source pools, production and schema/docs; behavior agent implemented hunger/local-meal arbitration; presentation agent implemented confined authoritative pig roaming, growth views, perimeter fences and GPU evidence; HUD/reviewer agent implemented food status/icons and independent tests. Minimum 3x1 or rotated 1x3 before births, one pig per three connected tiles, one birth per 12 seconds until full. Piglets grow over 30 simulation seconds and roam their connected enclosure; a reserved pig and eater must meet before timed eating. Stock and exact identities survive selling/shrinking, feature/view reloads and blocked routes. Food/work/rest priorities and alternate food/producer extensions pass review. Final 82 scripts and 1,571 headless checks pass; GPU31/0 includes all six pen cells visited, newborn/juvenile/adult views, three meals/two trips and rest/wake. Independent code/visual reviews approved, including repaired meal reachability and food-type component-cache bugs. User's later 3,000-gold request is accepted: finite bank in six Treasury tiles, 17 startup/conservation/mining checks, default GPU capture inspected. Blender user environment and background Python verified. Effort boundary respected: no cooking, mood penalties, wages, combat or complex chain. Growth changes appearance, not nutrition. User corrected the temporary 3x3 minimum to 3x1; latest instruction prevails.
+
 - Bedrock accepted: lead added solid terrain classification and scenario border/pattern helpers; presentation agent implemented distinct layered bedrock with matching raised picking surface; independent reviewer ran 73 rule/Viewport checks; UI agent replaced the gem-like Lair icon with a clear bed. Full suite1,249/0, scripts64/0; bedrock GPU15/0 and icon capture pass. Core/visual reviews approved marking/building protection, worker cancellation/conservation, A*, portal/bed access, atomic authoring helpers and unchanged starting routes/resources. Effort boundary respected: terrain/helpers and icon correction, no map editor or new systems.
 
 - Full-Treasury follow-up accepted: worker agent gated mineral-job discovery and active strikes on reachable free storage, retained orders/cargo and verified automatic spending/expansion resumption; stone digging continues. 60 focused checks pass, including hybrid rest/home-making while storage is full. Missing-storage and shared-workplace fixture expectations were updated to the user rule. Lead independently reviewed code and executed the integrated suite; no blockers remain.
@@ -293,7 +296,7 @@ Gate: exported build supports the complete loop with cohesive presentation, reli
 - Treasury: build now; costs stored gold and supplies finite storage capacity.
 - Each Treasury tile has its own gold stock and capacity. Workers spread deliveries across tiles with space. Configurable fullness thresholds display coin piles, small chests and large chests. Selling storage spills its contents as recoverable loose gold. The user chose a 50% construction-cost refund per tile, including starting room tiles; refund fills remaining storage or becomes loose gold if capacity is unavailable. Sale refunds are an explicit economy source in conservation checks.
 - Lair: approved for M3A; residents establish personal nests, with species-defined bed footprints rather than a universal one-bed-per-tile rule.
-- Hatchery / food room: next room role for physical food production; name and theme await lore discussion.
+- Pig Pen: selected for M3B basic physical food production. Dining Hall/cooks remain a later upgrade using shared food definitions and inventory/reservation APIs.
 - Approved direction: basic Hatchery/Pig Pen food can be eaten directly; a later Dining Hall combines cooking stations and tables for prepared meals with better hunger value/mood. Creatures need cooking capabilities. Other specialists can craft doors and room machinery in later packages; no wood/stone currencies are added.
 - Approved creature requirements: bed size, meal amount and desired gold wages vary by species. Only bed/rest behavior is active in M3A; food production/consumption and wage payment require dedicated verified packages.
 - Rooms need recognizable floor and wall art, supplied by definitions and updated with terrain/room edits. Keep diggable gold/gems recognizable and navigation independent of decorative meshes.
@@ -307,10 +310,10 @@ For each future package record: ID, objective, implementer, reviewer, owned file
 
 ## Latest handoff
 
-- Completed: indestructible bedrock for borders/arbitrary scenario patterns, with distinct solid rendering and shared raised targeting, plus a recognizable Lair bed icon. Existing local-home Grubbin/rest, tabbed hub, full-Treasury mining pause, A*/Treasury/Sell and work/rest priority remain verified.
-- Verification: `tools/dev.ps1 check` validates 64 scripts; `tools/dev.ps1 test` passes 1,249 checks. Independent core/behavior/input/visual reviews approved. Bedrock GPU15/0 and actual icon capture pass; the earlier local-bed/hub GPU26flags plus two sleep entries remain recorded. Border/internal pattern, blocked/mixed selection, matching crown height and bed-icon readability inspected. See `docs/VERIFICATION.md`.
-- Known limits: prototype allows one Grubbin; food and wage requirements are data only, with no active food/mood/wage/cooking/crafting/combat/XP or saves. Second species and keeper pickup/drop remain pending. Room prices, rest rates and storage thresholds are provisional. Native physical input automation remains unavailable; export templates absent. The user tried the updated build and approved this checkpoint for Git; refer to Git history for its revision.
-- Next action: commit/push as requested, then discuss current progress and the basic food-production/eating loop, specialist roles and remaining pet-dungeon work. No further implementation is authorized by this handoff; await the next direction.
+- Completed: modular Pig Pen production, stable growing/roaming cave pigs, minimum 3x1/1x3 footprint and one pig per three tiles, shared room capacity, outer fencing and local hunger/eating integrated with home/rest/work. Added food count, F3 satiety/eating, original icons and provenance. Fresh playtests receive 3,000 stored gold across six Treasury tiles. Blender 5.3 user environment/PATH and background Python are configured and verified.
+- Verification: `tools/dev.ps1 check` validates 82 scripts; `tools/dev.ps1 test` passes 1,571 checks. New suites: food28, feeding138, UI27, independent food45, pig life67 and starting gold17, all zero failures. Independent core/behavior/input/visual reviews approved. Food GPU31/0 demonstrates growth, all six pen cells visited, exact local meals, rest/wake, sale retention and conserved quantities. Lead inspected final growth/roaming/perimeter and 3,000/3,000 starting-bank captures. See `docs/VERIFICATION.md`.
+- Known limits: prototype allows one Grubbin; no starvation damage, mood, wages, cooking/crafting, combat, XP or saves. Growth is visual and does not gate edibility or change nutrition. Portal recruitment remains bed-gated. Second species and keeper pickup/drop remain pending. Prices/rates are provisional. Native physical input automation remains unavailable; export templates absent. Current assets are procedural; no Blender-authored asset has been produced. The user playtested and approved this checkpoint for commit/push; refer to Git history for its revision.
+- Next action: discuss progress and the next focused package after the user-approved Git checkpoint. Recommended discussion: keeper-hand pickup/drop and creature inspection, then a second species/attraction, needs consequences and save/load. This recommendation does not authorize implementation; do not start Dining Hall, cooks or other follow-ups without user direction.
 
 ## Later backlog
 

@@ -15,6 +15,7 @@ var actors: Array[CreatureState] = []
 var economy: GoldEconomy
 var rooms: DungeonRooms
 var beds: DungeonBeds
+var food: FoodEconomy
 var last_marked_cell := Vector2i(-1, -1)
 var excavation_marks: Dictionary[Vector2i, bool] = {}
 var hovered_cell := Vector2i(-1, -1)
@@ -28,6 +29,7 @@ func _init(dungeon_grid: DungeonGrid = null, content_registry: ContentRegistry =
 	if grid != null:
 		rooms = DungeonRooms.new(grid, registry, economy)
 		beds = DungeonBeds.new(grid, rooms, registry)
+		food = FoodEconomy.new(grid, rooms, registry)
 		grid.tile_changed.connect(_on_terrain_changed)
 
 
@@ -41,6 +43,7 @@ func spawn_creature(definition_id: StringName, cell: Vector2i) -> CreatureState:
 	_next_actor_id += 1
 	actor.definition_id = definition_id
 	actor.energy = registry.get_creature(definition_id).initial_energy
+	actor.satiety = registry.get_creature(definition_id).initial_satiety
 	actor.position = grid.cell_to_world(cell)
 	actors.append(actor)
 	actor_added.emit(actor)
@@ -54,6 +57,7 @@ func despawn_creature(actor_id: int) -> bool:
 			economy.retain_removed_actor(actor)
 			actors.erase(actor)
 			beds.release(actor_id)
+			food.release(actor_id)
 			actor_removed.emit(actor)
 			return true
 	return false

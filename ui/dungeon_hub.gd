@@ -73,6 +73,7 @@ func setup(context: GameContext) -> void:
 	_rooms.add_child(done_button)
 	context.rooms.changed.connect(refresh)
 	context.beds.changed.connect(refresh)
+	context.food.changed.connect(refresh)
 	context.actor_added.connect(_on_actor_changed)
 	context.actor_removed.connect(_on_actor_changed)
 	select_tab(&"creatures")
@@ -114,6 +115,8 @@ func refresh() -> void:
 		var capacity := 0
 		var gold_capacity := 0
 		var gold := 0
+		var food := 0
+		var food_capacity := 0
 		for room in _context.rooms.get_rooms():
 			if room.definition_id == id:
 				count += 1
@@ -122,9 +125,23 @@ func refresh() -> void:
 				gold_capacity += room.gold_capacity
 				for cell in room.cells:
 					gold += _context.economy.stored_by_cell.get(cell, 0)
+					food += _context.food.total_at(cell)
+					if _context.food.sources.has(cell):
+						food_capacity += _context.food.sources[cell].capacity
 		room_badges[id].text = str(count)
 		var definition := _context.registry.get_room(id)
 		var details := "Gold %d / %d" % [gold, gold_capacity] if definition.gold_storage_per_tile > 0 else ""
+		if definition.food_type != &"":
+			var food_type := _context.registry.get_food(definition.food_type)
+			var food_name: String = food_type.display_name if food_type != null else "Food"
+			details += ("\n" if not details.is_empty() else "") + "%s %d / %d" % [food_name, food, food_capacity]
+			var minimum: Vector2i = definition.food_minimum_size
+			if minimum != Vector2i.ONE:
+				details += "\nMinimum %d×%d" % [minimum.x, minimum.y]
+				if minimum.x != minimum.y:
+					details += " or %d×%d" % [minimum.y, minimum.x]
+			if definition.food_tiles_per_unit > 0:
+				details += "\n1 %s per %d room tiles" % [food_name, definition.food_tiles_per_unit]
 		var supports_beds := false
 		for species in _context.registry.get_creatures():
 			if &"rest" in species.capabilities and species.rest_room_tag in definition.tags:

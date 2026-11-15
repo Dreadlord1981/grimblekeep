@@ -18,10 +18,11 @@ func tick(delta: float) -> void:
 	if context == null or context.beds == null or not is_finite(delta) or delta <= 0.0:
 		return
 	context.beds.prune(context.actors)
+	context.food.prune(context.actors)
 	var residents: Dictionary[int, bool] = {}
 	for actor in context.actors:
 		var definition := context.registry.get_creature(actor.definition_id)
-		if definition == null or &"rest" not in definition.capabilities:
+		if definition == null or not (&"rest" in definition.capabilities or &"eat" in definition.capabilities):
 			continue
 		residents[actor.id] = true
 		if not behaviors.has(actor.id):

@@ -46,7 +46,7 @@ func tick(delta: float) -> void:
 				if _recovery_in <= 0.0 and behaviors[actor.id].drop_cargo():
 					behaviors.erase(actor.id)
 			continue
-		if actor.rest_requested:
+		if actor.needs_requested:
 			# Resident needs run first. Releasing a work reservation must not
 			# overwrite the current rest action or destroy retained physical cargo.
 			if behaviors.has(actor.id) and behaviors[actor.id].job != null:

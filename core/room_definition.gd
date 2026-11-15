@@ -9,6 +9,13 @@ extends Resource
 @export var buildable: bool = true
 @export var capacity_per_tile: int = 1
 @export var gold_storage_per_tile: int = 0
+@export var food_type: StringName
+@export var food_capacity_per_tile: int = 0
+## Positive density pools production/storage across a connected room.
+@export var food_tiles_per_unit: int = 0
+@export var food_minimum_size := Vector2i.ONE
+## Zero means storage/output only; later cooks can explicitly produce meals here.
+@export var food_production_seconds: float = 0.0
 @export_range(0.01, 1.0) var storage_small_chest_ratio: float = 0.35
 @export_range(0.01, 1.0) var storage_large_chest_ratio: float = 0.75
 @export var floor_color: Color = Color(0.28, 0.24, 0.22)
@@ -31,6 +38,16 @@ func validation_error() -> String:
 		return "Room sale refund must be a finite ratio from zero to one"
 	if capacity_per_tile < 0 or gold_storage_per_tile < 0:
 		return "Room capacity cannot be negative"
+	if food_capacity_per_tile < 0 or not is_finite(food_production_seconds) or food_production_seconds < 0.0:
+		return "Food capacity/production interval must be finite and nonnegative"
+	if (food_capacity_per_tile > 0) != (food_type != &""):
+		return "Food storage requires both a food type and positive capacity"
+	if food_production_seconds > 0.0 and food_capacity_per_tile == 0:
+		return "Food production requires storage capacity"
+	if food_tiles_per_unit < 0 or food_minimum_size.x <= 0 or food_minimum_size.y <= 0:
+		return "Food room density must be nonnegative and minimum dimensions positive"
+	if food_tiles_per_unit > 0 and food_type == &"":
+		return "Pooled food storage requires a food type"
 	if not is_finite(storage_small_chest_ratio) or not is_finite(storage_large_chest_ratio) or storage_small_chest_ratio <= 0.0 or storage_small_chest_ratio >= storage_large_chest_ratio or storage_large_chest_ratio > 1.0:
 		return "Storage stages require finite ratios: 0 < small < large <= 1"
 	return ""

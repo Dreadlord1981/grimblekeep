@@ -33,6 +33,8 @@ func _refresh() -> void:
 		var definition := _context.registry.get_room(room.definition_id)
 		if definition != null and not room.cells.is_empty():
 			_add_room_label(room, definition)
+			if definition.wall_style == &"pen_fencing":
+				_build_pen_perimeter(room, definition)
 	for bed in _context.beds.beds.values():
 		if not bed.established:
 			continue
@@ -101,6 +103,69 @@ func _build_floor_decoration(tile: Node3D, definition: RoomDefinition, cell: Vec
 			for edge in [-1, 1]:
 				for fringe in range(7):
 					DungeonGeometry.box(tile, Vector3(0.10, 0.015, 0.10 + float(fringe % 3) * 0.025), Vector3(-0.68 + fringe * 0.22, 0.112, edge * 0.83), faded)
+		&"muddy_straw":
+			var mud := DungeonGeometry.material(definition.floor_color.darkened(0.20))
+			var straw := DungeonGeometry.material(Color("ad9060"))
+			var puddle := DungeonGeometry.material(Color("40372d"))
+			DungeonGeometry.sphere(tile, Vector3(0, 0.102, 0), Vector3(1.88, 0.045, 1.86), mud, 8)
+			DungeonGeometry.sphere(tile, Vector3(-0.33, 0.125, 0.30), Vector3(0.56, 0.015, 0.39), puddle, 8)
+			for stalk in range(9):
+				var x := -0.72 + float(posmod(stalk * 7 + cell.x * 3, 13)) * 0.12
+				var z := -0.70 + float(posmod(stalk * 11 + cell.y * 5, 12)) * 0.12
+				var blade := DungeonGeometry.box(tile, Vector3(0.28, 0.012, 0.025), Vector3(x, 0.137, z), straw)
+				blade.rotation.y = float(stalk) * 1.9
+			if posmod(cell.x + cell.y, 3) == 0:
+				_build_trough(tile)
+
+
+func _build_trough(tile: Node3D) -> void:
+	var wood := DungeonGeometry.material(Color("70543b"))
+	var dark := DungeonGeometry.material(Color("393329"))
+	var center := Vector3(0, 0.20, -0.72)
+	DungeonGeometry.box(tile, Vector3(0.70, 0.09, 0.29), center, dark)
+	for side in [-1, 1]:
+		DungeonGeometry.box(tile, Vector3(0.76, 0.18, 0.055), center + Vector3(0, 0.055, side * 0.16), wood)
+		DungeonGeometry.box(tile, Vector3(0.055, 0.18, 0.32), center + Vector3(side * 0.36, 0.055, 0), wood)
+
+
+func _build_pen_perimeter(room: RoomState, definition: RoomDefinition) -> void:
+	var members: Dictionary[Vector2i, bool] = {}
+	var cells := room.cells.duplicate()
+	cells.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return a.y < b.y or (a.y == b.y and a.x < b.x))
+	for cell in cells:
+		members[cell] = true
+	var wood := DungeonGeometry.material(definition.accent_color)
+	var gate_placed := false
+	for cell in cells:
+		for direction: Vector2i in [Vector2i.UP, Vector2i.LEFT, Vector2i.DOWN, Vector2i.RIGHT]:
+			if members.has(cell + direction) or not _context.grid.is_walkable(cell + direction):
+				continue
+			_build_pen_section(cell, direction, wood, not gate_placed)
+			gate_placed = true
+
+
+func _build_pen_section(cell: Vector2i, direction: Vector2i, wood: Material, opening: bool) -> void:
+	# Only actual room perimeter edges receive rails; one open-floor edge is a
+	# central gate. Decoration has no collision and leaves navigation unchanged.
+	var gate := Node3D.new()
+	gate.name = "PenBoundary_%d_%d_%d_%d" % [cell.x, cell.y, direction.x, direction.y]
+	gate.set_meta("cell", cell)
+	gate.set_meta("direction", direction)
+	gate.set_meta("gate", opening)
+	gate.position = _context.grid.cell_to_world(cell) + Vector3(direction.x * 0.93, 0, direction.y * 0.93)
+	gate.rotation.y = atan2(float(-direction.x), float(-direction.y))
+	add_child(gate)
+	if not opening:
+		for post in [-0.90, 0.0, 0.90]:
+			DungeonGeometry.box(gate, Vector3(0.075, 0.47, 0.075), Vector3(post, 0.32, 0), wood)
+		for height in [0.24, 0.46]:
+			DungeonGeometry.box(gate, Vector3(1.88, 0.055, 0.055), Vector3(0, height, 0), wood)
+		return
+	for side in [-1, 1]:
+		for post in [0.48, 0.90]:
+			DungeonGeometry.box(gate, Vector3(0.075, 0.47, 0.075), Vector3(side * post, 0.32, 0), wood)
+		for height in [0.24, 0.46]:
+			DungeonGeometry.box(gate, Vector3(0.49, 0.055, 0.055), Vector3(side * 0.70, height, 0), wood)
 
 
 func _build_wall(tile: Node3D, definition: RoomDefinition, direction: Vector2i) -> void:
@@ -126,6 +191,14 @@ func _build_wall(tile: Node3D, definition: RoomDefinition, direction: Vector2i) 
 	var iron := DungeonGeometry.material(Color("302d31"))
 	var bone := DungeonGeometry.material(Color("b7a882"))
 	match definition.wall_style:
+		&"pen_fencing":
+			for post in [-1, 0, 1]:
+				DungeonGeometry.box(wall, Vector3(0.12, 1.22, 0.12), Vector3(post * 0.78, 0.73, 0.10), accent)
+			for height in [0.43, 0.88, 1.32]:
+				DungeonGeometry.box(wall, Vector3(1.78, 0.12, 0.10), Vector3(0, height, 0.12), accent)
+			for post in [-1, 1]:
+				for height in [0.43, 0.88, 1.32]:
+					DungeonGeometry.sphere(wall, Vector3(post * 0.78, height, 0.18), Vector3.ONE * 0.065, iron, 6)
 		&"brass_panels":
 			DungeonGeometry.box(wall, Vector3(1.82, 1.35, 0.06), Vector3(0, 0.82, 0.035), stone)
 			for edge in [-1, 1]:

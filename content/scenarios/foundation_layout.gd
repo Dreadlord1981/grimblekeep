@@ -47,8 +47,20 @@ static func _carve(grid: DungeonGrid, area: Rect2i) -> void:
 			grid.set_tile(Vector2i(x, y), DungeonGrid.Tile.FLOOR)
 
 
-static func setup_rooms(context: GameContext) -> void:
+static func setup_rooms(context: GameContext, starting_gold: int = 0) -> void:
 	# All open floor is immediately buildable; no separate claiming step.
-	# The four-cell Treasury supplies the bootstrap mining/construction loop.
+	# Fresh playtests receive a finite bank; zero preserves mining-only fixtures.
 	var treasury: Array[Vector2i] = [Vector2i(16, 18), Vector2i(17, 18), Vector2i(16, 19), Vector2i(17, 19)]
-	assert(context.rooms.place_initial(&"foundation.treasury", treasury), "Starting treasury must fit open floor")
+	if starting_gold > 2000:
+		treasury.append_array([Vector2i(18, 18), Vector2i(18, 19)])
+	var placed := context.rooms.place_initial(&"foundation.treasury", treasury)
+	assert(placed, "Starting treasury must fit open floor")
+	assert(starting_gold >= 0 and starting_gold <= context.economy.treasury_capacity, "Starting gold must fit the scenario Treasury")
+	var remaining := starting_gold
+	for cell in treasury:
+		var amount := mini(remaining, context.economy.available_storage(cell))
+		if amount > 0:
+			var deposited := context.economy.deposit(cell, amount)
+			assert(deposited, "Starting gold deposit must fit physical storage")
+			context.economy.initial_gold += amount
+			remaining -= amount

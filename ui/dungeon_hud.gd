@@ -13,6 +13,7 @@ const DigIcon = preload("res://assets/ui/action_dig.svg")
 const SleepIcon = preload("res://assets/ui/action_sleep.svg")
 const GoldIcon = preload("res://assets/ui/action_gold.svg")
 const IdleIcon = preload("res://assets/ui/action_idle.svg")
+const EatIcon = preload("res://assets/ui/action_eat.svg")
 
 var context: GameContext
 var active_tab: StringName = &"creatures"
@@ -34,7 +35,7 @@ var _debug_panel: PanelContainer
 var _root: Control
 var _input_panels: Array[Control] = []
 var _stored_gold: Label
-var _gold_in_transit: Label
+var _food_count: Label
 var _worker_count: Label
 var _resident_count: Label
 var _worker_roster: VBoxContainer
@@ -67,6 +68,7 @@ func setup(game_context: GameContext, keeper: KeeperController) -> void:
 	controller.construction_changed.connect(_refresh_construction)
 	controller.room_action_finished.connect(_show_room_result)
 	context.beds.changed.connect(_refresh_residents)
+	context.food.changed.connect(_refresh_food)
 	_refresh_marks(context.last_marked_cell)
 	_refresh_economy_and_workers()
 
@@ -114,8 +116,10 @@ func _build_header() -> void:
 	_stored_gold.tooltip_text = "Spendable gold deposited in the treasury. Gold carried by workers or lying on the ground is not spendable yet."
 	_stored_gold.mouse_filter = Control.MOUSE_FILTER_PASS
 	row.add_child(_stored_gold)
-	_gold_in_transit = _label("Carried 0  /  Ground 0", 13, MUTED)
-	row.add_child(_gold_in_transit)
+	_food_count = _label("FOOD   0", 16, Color(0.74, 0.77, 0.52))
+	_food_count.tooltip_text = "Physical food in producing rooms and loose on the dungeon floor."
+	_food_count.mouse_filter = Control.MOUSE_FILTER_PASS
+	row.add_child(_food_count)
 	_resident_count = _label("RESIDENTS   0", 16, INK)
 	row.add_child(_resident_count)
 	_worker_count = _label("WORKERS   0", 16, INK)
@@ -276,11 +280,17 @@ func _refresh_economy_and_workers() -> void:
 			ground += amount
 		var capacity: int = context.economy.treasury_capacity
 		_stored_gold.text = "GOLD   %d / %d" % [context.economy.stored_gold, capacity] if capacity >= 0 else "STORED GOLD   %d" % context.economy.stored_gold
-	_gold_in_transit.text = "Carried %d  /  Ground %d" % [carried, ground]
+	_stored_gold.tooltip_text = "Spendable Treasury gold.\nCarried %d · Ground %d · Pending recovery %d" % [carried, ground, context.economy.pending_gold()]
+	_refresh_food()
 	_worker_count.text = "WORKERS   %d" % visible_workers.size()
 	_refresh_residents()
 	if _hub != null:
 		_hub.refresh()
+
+
+func _refresh_food() -> void:
+	if _food_count != null and context != null:
+		_food_count.text = "FOOD   %d" % context.food.total_units
 
 
 func _refresh_residents() -> void:
@@ -289,7 +299,7 @@ func _refresh_residents() -> void:
 	var visible_residents: Dictionary[int, bool] = {}
 	for actor in context.actors:
 		var definition := context.registry.get_creature(actor.definition_id) if context.registry != null else null
-		if definition == null or not (&"rest" in definition.capabilities):
+		if definition == null or not (&"rest" in definition.capabilities or &"eat" in definition.capabilities):
 			continue
 		visible_residents[actor.id] = true
 		if not _resident_rows.has(actor.id):
@@ -349,13 +359,31 @@ func _creature_card(definition: CreatureDefinition, resident: bool) -> Control:
 	var value := _label("", 11, MUTED)
 	value.name = "Value"
 	status.add_child(value)
-	if resident:
+	if resident and &"rest" in definition.capabilities:
 		var bed := _icon(BedIcon, 19)
 		bed.name = "Bed"
 		status.add_child(bed)
 		var size_label := _label("", 11, MUTED)
 		size_label.name = "BedSize"
 		status.add_child(size_label)
+	if &"eat" in definition.capabilities:
+		var food_status := HBoxContainer.new()
+		food_status.name = "FoodStatus"
+		food_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		food_status.add_theme_constant_override("separation", 5)
+		info.add_child(food_status)
+		food_status.add_child(_icon(EatIcon, 18))
+		var satiety := ProgressBar.new()
+		satiety.name = "Satiety"
+		satiety.show_percentage = false
+		satiety.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		satiety.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		satiety.custom_minimum_size = Vector2(38, 7)
+		satiety.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		food_status.add_child(satiety)
+		var fullness := _label("", 11, MUTED)
+		fullness.name = "Value"
+		food_status.add_child(fullness)
 	return row
 
 
@@ -367,28 +395,42 @@ func _refresh_creature_card(row: Control, actor: CreatureState, definition: Crea
 	var action := String(actor.action).capitalize()
 	row.tooltip_text = "%s #%d · %s\n%s" % [definition.display_name, actor.id, action, actor.job_label]
 	if resident:
-		var bed := context.beds.get_bed(actor.id)
-		var size: Vector2i = definition.bed_size if bed == null else bed.size
-		var energy := roundi(clampf(actor.energy, 0.0, 1.0) * 100.0)
-		var forming_home := actor.action == &"claiming_bed" and bed != null and not bed.established
-		meter.value = roundi(clampf(actor.work_progress, 0.0, 1.0) * 100.0) if forming_home else energy
-		value.text = "%d%%" % roundi(meter.value)
-		row.get_node("Info/Status/BedSize").text = "%d×%d" % [size.x, size.y]
-		var bed_status := "Needs %d×%d bed" % [size.x, size.y]
-		var bed_color := Color(0.95, 0.39, 0.29)
-		if bed != null:
-			bed_status = "Bed %d×%d established" % [size.x, size.y] if bed.established else "Bed %d×%d reserved · On the way" % [size.x, size.y]
-			bed_color = Color(0.55, 0.72, 0.42) if bed.established else Color(0.92, 0.65, 0.25)
-			if forming_home:
-				bed_status = "Claiming reserved %d×%d bed · %d%%" % [size.x, size.y, roundi(meter.value)]
-		row.get_node("Info/Status/Bed").modulate = bed_color
-		row.tooltip_text += "\nEnergy %d%%\n%s" % [energy, bed_status]
+		_refresh_resident_card(row, actor, definition, meter, value)
 	else:
 		meter.value = clampf(actor.work_progress, 0.0, 1.0) * 100.0
-		if actor.carried_gold > 0:
+		if actor.carried_gold > 0 and actor.action != &"eating":
 			meter.value = float(actor.carried_gold) / float(definition.carry_capacity) * 100.0
-		value.text = str(actor.carried_gold) if actor.carried_gold > 0 else ""
+		value.text = "%d%%" % roundi(meter.value) if actor.action == &"eating" else str(actor.carried_gold) if actor.carried_gold > 0 else ""
 		row.tooltip_text += "\nCarrying %d / %d gold" % [actor.carried_gold, definition.carry_capacity]
+	if &"eat" in definition.capabilities and row.has_node("Info/FoodStatus"):
+		var fullness := roundi(clampf(actor.satiety, 0.0, 1.0) * 100.0)
+		row.get_node("Info/FoodStatus/Satiety").value = fullness
+		row.get_node("Info/FoodStatus/Value").text = "%d%%" % fullness
+		row.tooltip_text += "\nSatiety %d%%" % fullness
+
+
+func _refresh_resident_card(row: Control, actor: CreatureState, definition: CreatureDefinition, meter: ProgressBar, value: Label) -> void:
+	if &"rest" not in definition.capabilities:
+		meter.visible = actor.action == &"eating"
+		meter.value = clampf(actor.work_progress, 0.0, 1.0) * 100.0
+		value.text = "%d%%" % roundi(meter.value) if meter.visible else ""
+		return
+	var bed := context.beds.get_bed(actor.id)
+	var size: Vector2i = definition.bed_size if bed == null else bed.size
+	var energy := roundi(clampf(actor.energy, 0.0, 1.0) * 100.0)
+	var forming_home := actor.action == &"claiming_bed" and bed != null and not bed.established
+	meter.value = roundi(clampf(actor.work_progress, 0.0, 1.0) * 100.0) if forming_home or actor.action == &"eating" else energy
+	value.text = "%d%%" % roundi(meter.value)
+	row.get_node("Info/Status/BedSize").text = "%d×%d" % [size.x, size.y]
+	var bed_status := "Needs %d×%d bed" % [size.x, size.y]
+	var bed_color := Color(0.95, 0.39, 0.29)
+	if bed != null:
+		bed_status = "Bed %d×%d established" % [size.x, size.y] if bed.established else "Bed %d×%d reserved · On the way" % [size.x, size.y]
+		bed_color = Color(0.55, 0.72, 0.42) if bed.established else Color(0.92, 0.65, 0.25)
+		if forming_home:
+			bed_status = "Claiming reserved %d×%d bed · %d%%" % [size.x, size.y, roundi(meter.value)]
+	row.get_node("Info/Status/Bed").modulate = bed_color
+	row.tooltip_text += "\nEnergy %d%%\n%s" % [energy, bed_status]
 
 
 func _icon(texture: Texture2D, pixels: float) -> TextureRect:
@@ -409,6 +451,7 @@ func _action_icon(action: StringName) -> Texture2D:
 		&"sleeping": return SleepIcon
 		&"claiming_bed": return BedIcon
 		&"homeless": return BedIcon
+		&"eating": return EatIcon
 	return IdleIcon
 
 

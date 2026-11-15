@@ -20,8 +20,14 @@ extends Resource
 @export_range(0.0, 1.0) var sleep_threshold: float = 0.3
 @export_range(0.0, 1.0) var wake_threshold: float = 0.9
 @export var portal_population_limit: int = 0
-## Future food/wage systems consume these species requirements, not active yet.
 @export var food_per_meal: int = 1
+@export var food_tags: Array[StringName] = []
+@export_range(0.0, 1.0) var initial_satiety: float = 0.55
+@export var hunger_drain_per_second: float = 0.01
+@export_range(0.0, 1.0) var hunger_threshold: float = 0.3
+@export_range(0.0, 1.0) var sated_threshold: float = 0.9
+@export var eating_seconds: float = 1.5
+## Wage payment is a future system.
 @export var wage_gold: int = 1
 
 
@@ -42,4 +48,10 @@ func validation_error() -> String:
 		return "Sleep thresholds require 0 <= sleep < wake <= 1"
 	if portal_population_limit < 0 or food_per_meal <= 0 or wage_gold < 0:
 		return "Arrival limit/wages must be nonnegative and food amount positive"
+	if not is_finite(initial_satiety) or initial_satiety < 0.0 or initial_satiety > 1.0:
+		return "Initial satiety must be finite and between zero and one"
+	if not is_finite(hunger_drain_per_second) or hunger_drain_per_second < 0.0 or not is_finite(eating_seconds) or eating_seconds <= 0.0:
+		return "Hunger drain must be finite/nonnegative and eating time positive"
+	if not is_finite(hunger_threshold) or not is_finite(sated_threshold) or hunger_threshold <= 0.0 or hunger_threshold >= sated_threshold or sated_threshold > 1.0:
+		return "Food thresholds require 0 < hungry < sated <= 1"
 	return ""
