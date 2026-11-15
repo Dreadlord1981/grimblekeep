@@ -1,10 +1,11 @@
 # Grimblekeep — shared development checklist
 
-Status: planning only. Game implementation has not been authorized yet.
+Status: M2A digging/mining, M2B A* diagonals and M2C shared-side mining verified (2026-11-15). Stopped for the user's requested discussion.
 Updated: 2026-11-15
 
 ## How to use this plan
 
+- User's current stopping point: finish and verify A* diagonal movement and up to four miners per gold/gem seam (one per reachable cardinal side), then pause for discussion. Do not automatically begin room construction, progression, crowd avoidance or further systems.
 - Read this file and `AGENTS.md` before starting work.
 - Work toward the current milestone. Keep the game playable as systems are added.
 - Use `[ ]` for pending work and `[x]` only for work verified against its acceptance criteria.
@@ -21,6 +22,7 @@ Updated: 2026-11-15
 - Begin with coherent retro 1990s-style low-poly graphics, small textures and simple animations. Upgrade presentation later.
 - Restrained mouse-and-keyboard HUD with readable information and shortcuts.
 - An animated keeper hand is the primary world cursor: it points out excavation targets and lets the player pick up and drop creatures to guide them. Give it an original design matching Grimblekeep's gritty cartoon style.
+- Default click/drag on stone, gold or gem blocks toggles excavation marks directly; there is no separate generic selection or Hand/Dig/Inspect mode. Open ground is eligible only for future actions such as room construction. Marks glow across block tops and exposed sides, with green plus/red X previews for additions/removals.
 - Core loop: excavate, claim land, mine gold, build rooms, attract creatures through portals, meet their needs and expand.
 - The Dungeon Heart anchors the keeper's presence and forms the dungeon's central landmark. Begin with its chamber, a few worker imps and nearby mineable gold.
 - Keep the Heart separate from the portal: the Heart sustains the dungeon; the portal admits creatures. The Heart does not generate free gold or food.
@@ -61,6 +63,16 @@ Until then, use provisional names and replaceable content. Foundation work can p
 
 Begin with worker imps and the two initial resident species. Make this small cast memorable before expanding it. Review each species for a clear origin, a believable reason to join the dungeon and observable personality. Lore descriptions do not mark unimplemented behavior complete or authorize additional simulation systems.
 
+## Creature, job, behavior and progression systems
+
+- [x] Initial creature system: stable species definitions, individual identities/state and capabilities. Future needs, levels and experience remain separate work.
+- [x] Initial worker job system: discovers marked work, reserves workers/work positions, checks reachability, releases canceled/unreachable work and offers follow-up tasks as the dungeon changes.
+- [x] Initial worker behavior system: executes walking, working, carrying, depositing and idle behavior using explicit state transitions; presentation reads this state rather than deciding gameplay. Generic resident needs/behaviors remain later work.
+- [ ] Work progression follow-up: monsters earn experience from completed useful work and can level up. No experience for idling, failed/canceled actions or duplicated completion events.
+- [ ] Define data-driven XP thresholds, level limits and modest work-related benefits; show level/XP/current job when implemented. Test exactly-once rewards, thresholds and interrupted work before accepting progression.
+
+User sequencing: record these systems now, finish mining/digging first, then implement work-based progression as a focused package. Current workers need job and behavior separation; they do not need an XP system to begin excavating.
+
 ## Work and review flow
 
 1. Lead defines a small work package: objective, owned files, interfaces, acceptance criteria and verification method.
@@ -73,7 +85,7 @@ Use available agent slots for focused engineering, review and art tasks as neede
 
 ## AI development loops — required once implementation starts
 
-These loops turn the vision into observable acceptance checks. They reduce errors and drift; they cannot guarantee fun, flawless art or a commercial-quality game. Game implementation still requires the user's go-ahead. No background automation or additional service is enabled by this document.
+These loops turn the vision into observable acceptance checks. They reduce errors and drift; they cannot guarantee fun, flawless art or a commercial-quality game. The user authorized foundation implementation on 2026-11-15. No background automation or additional service is enabled by this document.
 
 ### A. Work-package loop: define, build, verify, review, repair
 
@@ -151,38 +163,45 @@ Blocking findings include crashes, data loss, duplicated resources/creatures, br
 
 ## Milestones and acceptance gates
 
-### 0. Planning and tooling — current milestone
+### 0. Planning and tooling — complete for local development
 
 - [x] Record vision, scope, milestones and review workflow.
 - [x] Document AI development loops, package/evidence requirements, repair limits and milestone acceptance rules.
-- [ ] Verify installed Godot executable and usable local test commands from this project directory.
-- [ ] Confirm export templates and graphics-capable test execution.
-- [ ] Establish art budgets, camera scale and a small set of visual references before asset production.
-- [ ] Obtain the user's go-ahead to begin game implementation.
+- [x] Verify installed Godot executable and usable local test commands from this project directory.
+- [x] Confirm export-template availability and graphics-capable test execution: GPU run passes; templates are absent, so standalone export remains pending for Milestone 5.
+- [x] Establish art budgets, camera scale and a small set of visual references before asset production (see `docs/ARCHITECTURE.md` and `docs/references/`).
+- [x] Obtain the user's go-ahead to begin game implementation (2026-11-15).
 
 Gate: agreed scope, working toolchain and explicit implementation authorization.
 
-### 1. Playable foundation
+### 1. Playable foundation — verified locally
 
-- [ ] Create the Godot project, folder conventions and reproducible launch/check commands.
-- [ ] Build a small grid-based 3D dungeon with solid rock and open floor.
-- [ ] Establish the starting Heart chamber with a placeholder pulsing Dungeon Heart, a few workers and nearby gold; leave an accessible route for expansion.
-- [ ] Implement perspective camera pan, rotation, zoom and floor selection.
-- [ ] Add a placeholder keeper hand cursor with clear hover/pointing feedback on world targets; UI interaction must not trigger world actions.
-- [ ] Show an animated placeholder creature at correct world scale.
-- [ ] Add a diagnostic scene and basic error logging.
+- [x] Create the Godot project, folder conventions and reproducible launch/check commands.
+- [x] Build a small grid-based 3D dungeon with solid rock and open floor.
+- [x] Establish the starting Heart chamber with a placeholder pulsing Dungeon Heart, a few workers and nearby gold; leave an accessible route for expansion.
+- [x] Implement perspective camera pan, rotation, zoom and floor selection.
+- [x] Add a placeholder keeper hand cursor with clear hover/pointing feedback on world targets; UI interaction must not trigger world actions.
+- [x] Support rectangular tile drag selection, click toggling, additive/removal modifiers and clearing selection; HUD panels must not leak selection or leave a stuck drag. Default click/drag toggles every affected tile and preserves selection outside the area.
+- [x] Default keeper-hand marking accepts stone, gold and gems and rejects open floor/landmarks, with no mode split. Green plus/red X hover/drag previews and footer counts show exact changes; persistent amber glow covers tops and exposed sides.
+- [x] Show an animated placeholder creature at correct world scale.
+- [x] Add a diagnostic scene and basic error logging (main scene, F3 overlay and validation/test runners).
 
 Gate: project launches without script errors; camera and selection work at different angles and zoom levels; the Heart reads as the central landmark and is visually distinct from the portal; a rendered capture has been inspected.
 
+Evidence: `docs/VERIFICATION.md`; 28 scripts validated and 128 checks passed after default excavation/glow follow-up. GPU captures inspected at overview and close distances, plus mixed preview and top/side glow views. Native desktop automation failed to initialize; physical input feel still needs manual observation, while Godot Viewport input routing is tested.
+
 ### 2. Workers and construction
 
-- [ ] Mark accessible rock for excavation; workers reach it and dig.
-- [ ] Use the keeper hand to mark/cancel excavation targets, with distinct valid, selected and blocked feedback at different camera angles.
+- [x] M2A: marked stone becomes walkable floor, finite gold is mined into physical cargo/piles and deposited in a small starting treasury. No room-building interface is required for this package.
+- [x] Mark accessible rock for excavation; workers reach it and dig.
+- [x] Use the keeper hand to mark/cancel excavation targets, with distinct valid, selected and blocked feedback at different camera angles.
 - [ ] Claim excavated floor and update walkability.
-- [ ] Mine finite gold seams and haul carried gold into treasury storage.
+- [x] Mine finite gold seams and haul carried gold into treasury storage. Gold nodes hold 200; workers extract 20 per strike, carry up to 60 and deposit physically. Gem nodes yield gold more slowly and remain in place.
+- [x] Use eight-direction A* with weighted distance costs, strict no-corner-cutting, revision-aware navigation and mid-route edge revalidation. Workers move at equal world speed; mining remains cardinal-adjacent.
+- [x] Allow up to four miners per gold/gem node, one per reachable cardinal side, with shared yield accounting and individually releasable reservations. Stone and loose piles remain exclusive.
 - [ ] Build/remove room tiles with clear selection, validity and cost feedback.
 - [ ] Recognize connected rooms and handle merging/splitting and capacity changes.
-- [ ] Handle unreachable jobs, blocked routes and interrupted work without stuck workers or duplicate rewards.
+- [x] Handle unreachable jobs, blocked routes and interrupted worker excavation/hauling without duplicate rewards; regression coverage includes cargo recovery when actors disappear and treasury access changes.
 
 Gate: a scripted scenario excavates a route, deposits gold and constructs a room; checks cover room changes, spending and job ownership.
 
@@ -220,6 +239,7 @@ Gate: test results and measured performance are recorded; no unresolved critical
 - [ ] Review assets together at actual gameplay distance and during movement.
 - [ ] Polish desktop HUD, shortcuts, camera occlusion and a short introduction.
 - [ ] Export a Windows build and run the exported build through the complete pet-dungeon scenario.
+- [ ] Install the matching export templates before producing the standalone Windows build (not required for editor/local runs).
 - [ ] Complete independent code and visual reviews, fix release-blocking findings and record known issues.
 
 Gate: exported build supports the complete loop with cohesive presentation, reliable saves and recorded test evidence. This is a vertical slice, not a claim of commercial release readiness.
@@ -227,7 +247,13 @@ Gate: exported build supports the complete loop with cohesive presentation, reli
 ## Quality rules
 
 - Keep simulation state separate from rendering; assets should be replaceable without rewriting game rules.
+- Organize code by responsibility: core state/contracts, content definitions/features, presentation, interaction, UI and tests. Document dependency direction and extension examples in `docs/ARCHITECTURE.md`.
+- Add creatures and rooms through stable-ID data definitions and optional scenes. Add mechanics through explicit feature modules with lifecycle/context/events, without editing core dispatch switches for each new species or room.
+- Avoid a monolithic controller, hard-coded node paths between unrelated systems and speculative framework machinery. Shared interfaces belong to the lead; changes require dependency review.
+- Review new definitions for duplicate IDs, invalid values and missing references. Prove extension boundaries with a small test module, not only architecture prose.
+- Code review must check module boundaries, readable names, small focused functions, deterministic testability, error handling and preservation of existing behavior. New mechanics may extend contracts deliberately when needed; do not promise that core will never evolve.
 - Maintain one clear source of truth for ownership, gold, needs, capacity and reservations.
+- Tool eligibility belongs in authoritative selection/command rules. Preview symbols and counts must match the operation committed on release, including mixed toggles and modifier changes; do not rely on color alone for removal feedback.
 - Prefer simple systems with explicit responsibilities. Profile before introducing complex optimizations.
 - Use tests for consequential rules and failure cases; inspect rendered output for visual correctness. Headless success alone does not verify graphics or controls.
 - Assets must pass silhouette, scale, palette, texture, animation and import checks. Record their source/license or generation provenance.
@@ -236,16 +262,25 @@ Gate: exported build supports the complete loop with cohesive presentation, reli
 
 ## Active assignments
 
-None. Implementation is pending authorization.
+- M2C multi-side mining — accepted: side reservations for up to four gold/gem miners, 52 focused checks and four-miner GPU capture verified. Independent review approved shared yield, reachable faces, cancellation, depletion, replacement and global workplace conflicts.
+- M2B A* and diagonal movement — accepted: native octile A*, strict corner rules, weak revision cache, movement edge validation and weighted job choices. Independent Dijkstra/worker regression suite passes 366 checks. Full suite 658/0, scripts 40/0; GPU worker scenario confirms diagonal travel and 400 gold deposited without loss. Independent review approved.
+- M2A worker excavation/mining — accepted: core path/economy contracts, separate job board/behavior module, worker animation/cargo, loose gold/treasury and real HUD complete. Independent review approved; 240 checks pass and 37 scripts validate. GPU scenario dug stone and deposited exactly 400 finite gold with conservation checked every tick. Leveling remains follow-up per user sequencing.
+- F1 core/tooling — accepted: lead implemented explicit contracts, validated module registry, replaceable scenario/feature, test runners and architecture docs; core 32 checks pass.
+- F2 world presentation — accepted: world-view agent implemented procedural batched terrain and landmarks/actors; GPU captures inspected and mesh winding repaired.
+- F3 interaction/UI — accepted: interaction agent implemented camera, accurate targeting, hand/HUD and user-requested multi-tile toggling; targeting 37, selection 14 and full-scene integration 10 checks pass.
+- F4 independent review — accepted for M1: separate reviewer ran the suites, checked architecture/visuals and rechecked fixes to picking and script-validation failures; no code blockers remain. Native automation limitation is documented.
+- F5 tool split — superseded by the user's clarification: remove separate Hand/Dig modes and generic ground selection. Keep the add/remove preview work.
+- F6 default excavation and glow — accepted: authoritative marks on stone/gold/gem, mode UI removed, terrain-change cleanup, amber glow on tops and sides. Core 38, targeting 49, input 31, integration 10 pass (128 total). Lead and independent reviewer inspected mixed preview and top/side glow captures. Reviewer-noted stationary terrain-change preview gap fixed with regression checks. Worker execution remains Milestone 2.
+- No work package active. Stop implementation and discuss next steps.
 
 For each future package record: ID, objective, implementer, reviewer, owned files, dependencies, acceptance checks and status.
 
 ## Latest handoff
 
-- Completed: shared plan and agent entry instructions; keeper hand and Dungeon Heart included in scope. Added required gameplay, asset, independent review and integration loops with evidence, acceptance and repair rules. Added a collaborative world/lore checkpoint after Milestone 1, including a per-species structure for origins, culture, motivation, needs, talents, personality, humor and gameplay connections. Heart defense and destruction remain future combat work. Implementation remains pending authorization.
-- Verification: documentation checked against the agreed conversation scope; no game tests apply yet.
-- Known limits: toolchain/export/graphical testing has not been verified from this directory; generated concepts are visual references, not usable 3D game assets.
-- Next action: after implementation authorization, verify tooling and establish the first foundation work packages.
+- Completed: foundation and worker digging/mining/hauling, now with eight-direction A*, corner-safe dynamic routes and up to four miners sharing gold/gem nodes on reachable cardinal faces. Work-based leveling remains planned, not implemented.
+- Verification: `tools/dev.ps1 check` validates 40 scripts; `tools/dev.ps1 test` passes 658 checks. Independent review approved both updates. GPU captures verify four miners and diagonal worker movement; the worker scenario still deposits 400 gold and conserves supply. See `docs/VERIFICATION.md`.
+- Known limits: no room-building UI, ownership/claim system, creature needs/recruitment, XP/levels or saves. Starting treasury is scenario-defined with unlimited storage. Deposit transfer is instantaneous; its dedicated pose does not persist to a rendered frame. Physical input feel remains manually tested; export templates absent. This checkpoint is being committed for the requested status discussion; refer to Git history for its revision.
+- Next action: stop and discuss current state/next work with the user. Recommended topics: room construction/economy, lore checkpoint, then creature needs/recruitment and work progression. Do not start any of these automatically.
 
 ## Later backlog
 
