@@ -1,10 +1,171 @@
 # Grimblekeep verification — 2026-11-15
 
-Foundation, workers and modular Treasury Build/Sell are verified locally with
-independent review. Lair/food mechanics, needs, attraction, leveling and saving
-remain pending. Sections below the current checkpoint record earlier baselines.
+Foundation, workers, Treasury Build/Sell and the first Grubbin/Lair rest loop are
+verified locally with independent review. Food/mood/wages, a second species,
+keeper pickup/drop, leveling and saving remain pending. Earlier sections below
+the current checkpoint retain their historical counts and scope.
 
-## Modular Treasury construction and selling — current verification
+## Indestructible bedrock and Lair icon — current verification
+
+`tools/dev.ps1 check`: **64 scripts, zero failures**. Full `tools/dev.ps1 test`
+passes the earlier 1,176 checks plus 73 independent bedrock checks:
+**1,249 checks, zero failures**.
+
+Bedrock appends terrain ID 6 without renumbering the original types. Its solidity
+is independent from excavation permission: it blocks A*, room placement, portal
+access and personal bed footprints, but accepts no excavation marks/mineral yield.
+Rule scenarios replace active stone/gold/gem jobs with bedrock, prove marks/jobs
+are canceled before completion and verify physical gold is conserved. Direct
+commands and actual Viewport mixed click/drag selection cannot mark bedrock.
+Perspective nearest-hit targeting covers 12 camera angle/distance combinations
+against the shared 2.15 raised surface.
+
+Scenario checks verify the entire starting border, preserved Heart/portal/start
+routes and all eight mineral access points, plus the internal pattern. Public
+trusted helpers cover arbitrary disconnected/duplicate cells, atomic rejection
+of a mixed invalid pattern with no revision mutation, null/nonpositive inputs
+and a two-cell border around a rectangular grid. Trusted terrain edits can still
+replace bedrock deliberately; player gameplay cannot destroy it.
+
+GPU `tests/bedrock_render_probe.gd` passes **15 checks**: all bedrock bodies/crowns
+exist at the correct raised height, blocked/mixed Viewport selection is correct,
+ordinary marks/glow remain functional and live neighbor edits preserve bedrock.
+Lead and independent reviewers inspected `bedrock-wide.png`,
+`bedrock-internal.png`, `bedrock-blocked-target.png`, `bedrock-mixed-selection.png`,
+`bedrock-strata-close.png` and `bedrock-border-close.png` in ignored `artifacts/`.
+Flat blue-charcoal crowns and side strata read distinctly from rough brown rock.
+Initial crown/core Z-fighting was caught, corrected and rechecked; crown tops
+match the authoritative height. Rendering now uses `is_solid`, while ore/rubble
+exposure uses walkability so bedrock is never mistaken for open floor.
+
+The Lair's original SVG icon was redrawn as a side-view bed with a tall headboard,
+pillow, rectangular patched blanket, footboard and legs. Actual GPU hub capture
+`tests/ui_icon_render_probe.gd` passes with `HUB ICON CAPTURE: OK`;
+`artifacts/hub-lair-bed-icon.png` was inspected by lead and independent reviewers.
+No gem/ruby silhouette remains. No blocking findings remain. The user tried the
+updated build and approved this checkpoint for Git; its revision is in Git history.
+These changes include the preceding M3A packages; no map editor,
+new economy, native desktop automation or export/performance gate is claimed.
+
+## Local beds, tabbed hub and full-Treasury pause — earlier baseline
+
+`tools/dev.ps1 check`: **61 scripts, zero failures**. Full `tools/dev.ps1 test`:
+core38, path/economy20, pathfinding366, targeting49, excavation input31,
+integration10, workers92, mining sides52, room rules42, Treasury workers33,
+construction input47, room review97, bed contracts31, residents118, resident UI41,
+independent resident review49, full Treasury60: **1,176 checks, zero failures**.
+
+The user's corrections distinguish reserved capacity from an established home.
+Reservations remain exclusive to avoid over-recruitment, but no bed mesh/cot lift
+exists until the owner reaches the footprint center and completes a local claim.
+The core command rejects remote owners, invalid profiles/footprints, nonfinite
+positions and stale completion after selling; repeated valid completion emits
+no duplicate notification. Behavior tests cover healthy home-first travel, larger
+footprint centers, displacement and progress reset, pending feature reloads,
+selling during claiming, re-acquisition and work/rest priority with retained cargo.
+
+The focused `DungeonHub` control now owns the bottom tabs. Creatures is selected
+by default, with one portrait per species and live population overlaid. Rooms
+shows one icon per type with connected-room count; tooltips distinguish tiles,
+gold stock/capacity and pending/established personal beds. The fixed right sidebar
+and verbose footer are removed; controls and individual details appear only in
+the hidden F3 debug window. Input tests exercise actual tab clicks, default/hidden
+states, spawn/despawn updates, room merges/splits, capacity tooltips, no reopened
+sidebar, world isolation, preserved dig marks and safe right-click cancellation.
+Construction quotes follow event-tracked cursor position, including synthetic
+Viewport events; native physical input automation remains unavailable.
+
+Mineral discovery and active-strike validation both require reachable free Treasury
+space. Tests fill finite/gem storage through real hauling, fill it mid-strike,
+verify zero further extraction/progress/rewards, preserve marks, and resume after
+spending/expansion. Ordinary stone/buried stone chains continue. Empty unreachable
+storage and temporarily reserved delivery positions are distinguished; full storage
+does not prevent a hybrid creature making its bed and resting. Conservation is
+checked per tick. Cargo already in transit is preserved, not predicted against
+future capacity. The earlier absent-Treasury and shared-workplace fixtures were
+updated to the explicitly changed gameplay rule, retaining their original intent.
+
+GPU `tests/lair_render_probe.gd` passes **26 boolean conditions plus two sleep
+entries**. It proves the Lair remains bare before arrival, at the portal, during
+approach and during the local claiming gesture. The personal-bed node first
+appears after establishment while its owner is within the authoritative center
+distance. Existing walking/gait, sleep/wake, cot departure/lift reset, wall/glow
+restoration, room edits, bed recovery and gold conservation still pass.
+
+Final 1280x800 captures inspected by lead and independent reviewers include
+`hub-creatures-default.png`, `lair-and-treasury-overview.png`,
+`hub-build-cursor-quote.png`, `hub-f3-diagnostics.png`, `lair-before-arrival.png`,
+`lair-arrival-pending.png`, `lair-approach-pending.png`, `grubbin-claiming-bed.png`,
+`lair-personal-bed.png` and the earlier rest/movement/glow views in ignored
+`artifacts/`. Species counts3/0 then3/1, room counts2/1 and price50 are visually
+distinct. F3 fits the viewport and the ordinary world view has no right panel.
+No blocking code or visual findings remain. This M3A work/follow-up checkpoint is
+tracked in Git history; no additional food/wages/crafting/combat mechanic was started.
+
+## M3A Grubbin, Lair and icon controls — earlier baseline
+
+`tools/dev.ps1 check`: **59 scripts, zero failures**. Full `tools/dev.ps1 test`:
+core 38, path/economy 20, pathfinding 366, targeting 49, excavation input 31,
+scene integration 10, workers 92, mining sides 52, rooms 42, Treasury workers 33,
+room input 44, room review 97, bed contracts 24, residents 89, resident UI 20,
+independent resident review 32: **1,039 checks, zero failures**.
+
+Bed/AI checks execute actual fitting of rectangular species footprints within one
+tagged connected room, non-overlap, fragments that have enough tile count but no
+fitting rectangle, same-tag/different-definition boundaries, ownership through
+merges/splits, actor removal and invalid references. Arrival requires a reachable
+portal/free bed and respects the definition's population limit. The current
+Grubbin limit is one; imps still begin as three scenario workers.
+
+Residents repeatedly explore, tire, walk to personal beds, sleep and wake. Tests
+interrupt sleep by selling/blocking bed cells, restore room space, seal/reopen
+routes, invalidate diagonal flanks mid-route and reload features. A combined
+rest/work creature releases reservations, retains cargo, does not move twice and
+resumes mining/hauling all 200 seam gold after waking. The corrected conservation
+oracle compares `accounted_gold` against finite supply plus gem output; refunds
+are already subtracted by that API. Paid Lair sales exercise nonzero refunds.
+Despawn also preserves cargo if no worker feature is loaded and clears pending
+recovery entries when a live worker feature safely drops the removed actor's gold.
+
+Viewport input checks cover icon toolbar choices, separate worker/resident cards,
+normalized energy, actual bed status, work progress, warning tint, panel bounds at
+1280x800 and world input isolation. Right-click cancels Build and Sell, including
+a held left drag or a pointer over UI; releasing the left button then has no effect.
+Default RMB camera orbit still works. Original SVG icons/portraits are provided by
+definitions; names/jobs/cost details remain available through tooltips.
+
+GPU `tests/lair_render_probe.gd` passes **20 boolean flags plus two sleep entries**:
+finite funding, Lair/Treasury Viewport construction, distinct styles, mineral-face
+readability, portal arrival, personal bed, walking and gait changes across rendered
+frames, sleeping, waking/recovery, cot departure, marked-wall glow/restoration,
+wall removal after excavation, bed removal/recovery, lift reset, conservation and
+successful captures. Test-only accelerated simulation and finite stock fixtures
+are confined to the harness; no player speed controls or free game currency added.
+
+Lead and independent reviewers inspected final frames at 1280x800:
+`lair-and-treasury-overview.png`, `treasury-wall-inlays.png`, `lair-personal-bed.png`,
+`grubbin-walking-a.png`, `grubbin-walking-b.png`, `grubbin-sleeping.png`,
+`grubbin-awake.png`, `grubbin-leaving-bed.png`, `lair-rest-cycle.png`,
+`lair-marked-wall-glow.png`, `lair-wall-restored.png`, `lair-bed-removed.png`
+in local ignored `artifacts/`. Floor inlays/brass wall seals distinguish Treasury
+from Lair rugs/ragged skull hangings. Exposed gold/gem faces stay visible. A visual
+regression was found and fixed: marked rock temporarily hides wall dressing so
+top/side amber glow remains readable. Wake/departure cot lift prevents feet clipping
+through the mattress and resets when the personal bed disappears. Two actual
+walking frames verify the gait changes; sleeping frames show the rest pose.
+
+Grubbin, cots and room dressing are original procedural low-poly meshes. UI SVGs
+are original code-authored assets; provenance is in `assets/ui/README.md`. The
+user-approved generated concept was copied into `docs/references/` as direction,
+not a runtime 3D asset. `LORE.md` records approved facts and open questions.
+
+Independent core/resident/work/UI and visual reviews found no remaining blockers.
+This is the first rest loop, not full Milestone 3: meal amounts/wages are profile
+data only, with no food consumption/payment/mood system yet. No native desktop
+automation, audio, stress/performance or export gate is claimed. Changes remain
+tracked in Git history with the later user-requested corrections.
+
+## Modular Treasury construction and selling — earlier baseline
 
 `tools/dev.ps1 check`: **48 scripts, zero failures**. `tools/dev.ps1 test`:
 core 38, path/economy 20, independent pathfinding 366, targeting 49, excavation

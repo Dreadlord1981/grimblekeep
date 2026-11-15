@@ -33,6 +33,8 @@ func tick(delta: float) -> void:
 			if not removed.recover_removed_actor():
 				context.economy.retain_removed_actor(removed.actor)
 				orphaned_cargo.append(removed)
+			else:
+				context.economy.release_removed_actor(actor_id)
 			behaviors.erase(actor_id)
 	for actor in context.actors:
 		var definition := context.registry.get_creature(actor.definition_id)
@@ -43,6 +45,20 @@ func tick(delta: float) -> void:
 				# floor becoming blocked; later actor removal must still recover it.
 				if _recovery_in <= 0.0 and behaviors[actor.id].drop_cargo():
 					behaviors.erase(actor.id)
+			continue
+		if actor.rest_requested:
+			# Resident needs run first. Releasing a work reservation must not
+			# overwrite the current rest action or destroy retained physical cargo.
+			if behaviors.has(actor.id) and behaviors[actor.id].job != null:
+				var action := actor.action
+				var label := actor.job_label
+				var target := actor.target_cell
+				var progress := actor.work_progress
+				behaviors[actor.id].cancel()
+				actor.action = action
+				actor.job_label = label
+				actor.target_cell = target
+				actor.work_progress = progress
 			continue
 		if not behaviors.has(actor.id):
 			behaviors[actor.id] = WorkerBehavior.new(context, job_board, actor)

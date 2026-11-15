@@ -1,11 +1,11 @@
 # Grimblekeep — shared development checklist
 
-Status: Milestone 2 workers/construction verified locally, including modular Treasury, per-tile gold and explicit 50% Sell (2026-11-15).
+Status: M3A follow-ups and indestructible bedrock verified locally, including a clearer Lair bed icon (2026-11-15). Full pet-dungeon milestone remains open.
 Updated: 2026-11-15
 
 ## How to use this plan
 
-- User authorized modular Treasury construction, then removed separate claiming: any excavated floor is immediately buildable. Build never toggles existing room tiles off. Only explicit Sell mode removes built tiles, with the user's chosen 50% refund. This package is verified; report status and await the next direction. Do not automatically begin resident needs, recruitment, progression or crowd avoidance.
+- User approved the Grubbin/Lair concept and asked to try it, adding recognizable room wall/floor art, icon-led controls and right-click construction cancellation. M3A is verified and ready to playtest. Species bed sizes, food amounts and wage requirements are data; active food/wages, cooking, crafting, doors/machines and XP follow later packages.
 - Read this file and `AGENTS.md` before starting work.
 - Work toward the current milestone. Keep the game playable as systems are added.
 - Use `[ ]` for pending work and `[x]` only for work verified against its acceptance criteria.
@@ -41,12 +41,12 @@ Combat, invading heroes, research, spells, traps, campaigns, multiplayer and ela
 
 ## World and lore checkpoint — after the playable foundation
 
-- [ ] Hold a world-building discussion with the user after Milestone 1, before finalizing creature identities, room themes and narrative content for Milestone 3.
+- [ ] Complete the world-building discussion with the user. First Grubbin/Lair and specialist-community direction agreed; keeper, Heart meaning and wider world remain open in `LORE.md`.
 - [ ] Establish who the keeper is, what the Dungeon Heart means and why this dungeon exists.
 - [ ] Decide where portals lead, why creatures choose to arrive and what life underground is like.
 - [ ] Define the surface world and its view of dungeon inhabitants, including the motives of future invading heroes.
 - [ ] Establish the balance of menace, affection and twisted humor, with examples that guide names, dialogue, props and creature behavior.
-- [ ] Capture agreed canon in a short `LORE.md` when that discussion happens; separate accepted facts from open ideas.
+- [x] Capture the approved Grubbin/Lair and specialist-community direction in `LORE.md`, with open world questions separated. Later canon still needs discussion.
 
 Until then, use provisional names and replaceable content. Foundation work can proceed once authorized; avoid inventing permanent lore or commissioning substantial narrative-dependent assets before this checkpoint. Lore should explain and enrich the agreed mechanics; any new gameplay scope needs a separate decision. Begin with a concise premise and world rules rather than a full campaign history.
 
@@ -210,17 +210,21 @@ Evidence: 48 scripts validate and 870 automated checks pass, including 42 room r
 
 ### 3. Living pet dungeon
 
+- [x] M3A: one Grubbin can arrive through a reachable portal after a fitting personal Lair bed becomes available, explore, tire, sleep and wake repeatedly. Species data supports larger footprints; first Grubbin population is capped at one for this prototype.
+- [x] Add recognizable room floor and rock-wall dressing, original procedural Grubbin/cots, icon-led room choices/creature cards and safe right-click Build/Sell cancellation. Preserve mineral readability and amber excavation top/side glow.
 - [ ] Define rooms and species through data with explicit attraction requirements.
 - [ ] Spawn residents through a connected portal only when requirements and capacity allow.
-- [ ] Implement hunger, energy, mood and autonomous action choice.
-- [ ] Reserve beds and food targets; release reservations when actions fail or targets disappear.
-- [ ] Provide working food production, eating and sleeping behaviors.
+- [ ] Implement full hunger/energy/mood action choice. M3A energy/rest/exploration is verified; hunger and mood remain pending.
+- [ ] Complete target reservation across beds and food. Personal bed footprints and release/recovery are verified; food targets remain pending.
+- [ ] Complete food production, eating and sleeping. M3A sleeping works; food production/eating remain pending.
 - [ ] Add two species with distinguishable silhouettes, preferences and behavior.
 - [ ] Inspect/name residents and display their current action and needs.
 - [ ] Pick up eligible friendly creatures with the keeper hand and drop them on valid accessible dungeon floor; invalid drops keep them held and show why.
 - [ ] Suspend movement/jobs while held, release stale reservations and resume sensible behavior after dropping; prevent duplicate creatures and recover safely if a held creature is removed or the game is saved/loaded.
 
 Gate: expanding the dungeon changes which species can arrive; residents repeatedly satisfy needs without starvation loops, reservation leaks or becoming stuck. Keeper-hand pickup/drop works across camera views, respects placement rules and leaves creature/job state consistent.
+
+M3A evidence: 59 scripts validate and 1,039 checks pass (including 24 bed contracts, 89 resident behavior checks, 20 resident UI checks and 32 independent edge cases). GPU probe passes 20 boolean conditions plus two full sleep entries/wake/recovery, with Viewport construction and inspected walking/sleeping/awake/departure frames. Full Milestone 3 is not complete: food/mood, second species and keeper pickup/drop remain open.
 
 ### 4. Persistence and robustness
 
@@ -265,6 +269,14 @@ Gate: exported build supports the complete loop with cohesive presentation, reli
 
 ## Active assignments
 
+- Bedrock accepted: lead added solid terrain classification and scenario border/pattern helpers; presentation agent implemented distinct layered bedrock with matching raised picking surface; independent reviewer ran 73 rule/Viewport checks; UI agent replaced the gem-like Lair icon with a clear bed. Full suite1,249/0, scripts64/0; bedrock GPU15/0 and icon capture pass. Core/visual reviews approved marking/building protection, worker cancellation/conservation, A*, portal/bed access, atomic authoring helpers and unchanged starting routes/resources. Effort boundary respected: terrain/helpers and icon correction, no map editor or new systems.
+
+- Full-Treasury follow-up accepted: worker agent gated mineral-job discovery and active strikes on reachable free storage, retained orders/cargo and verified automatic spending/expansion resumption; stone digging continues. 60 focused checks pass, including hybrid rest/home-making while storage is full. Missing-storage and shared-workplace fixture expectations were updated to the user rule. Lead independently reviewed code and executed the integrated suite; no blockers remain.
+
+- M3A-local-bed/hub accepted: lead added pending/established bed contract and authoritative proximity enforcement; simulation agent implemented immediate home travel and local claiming; presentation agent hides pending beds and verified actual formation; UI agent supplied a focused tabbed hub, count overlays and F3-only details. Bed contracts31/0, resident118/0, UI41/0, construction input47/0, independent resident review49/0. GPU26flags true plus two sleep entries. Pending space is exclusive but invisible, healthy creatures visit it first, remote/displaced/stale claims fail, and established rest/worker priority survives. Creatures is default; Rooms counts connected groups with actual tile/gold/bed tooltips. Old sidebar/footer text removed. Independent reviews and lead visual inspection approved. Effort boundary respected: requested corrections only.
+
+- M3A accepted: lead implemented bed contracts, content/profile extensions, work/rest priority, lore/reference and docs; simulation agent implemented resident arrival/rest with 89 checks; UI agent implemented original SVG icons, compact cards, right-click cancellation and 20 UI/44 room-input checks; presentation agent implemented Grubbin/cots/room art and 32 independent edge checks. Full suite 1,039/0, scripts 59/0. GPU 20 flags true plus two sleep entries. Independent code and visual reviews approved; repaired wall-art occlusion of excavation glow and sleeping/waking cot alignment. One species/rest loop only; active food/wages/crafting not started.
+
 - M2C multi-side mining — accepted: side reservations for up to four gold/gem miners, 52 focused checks and four-miner GPU capture verified. Independent review approved shared yield, reachable faces, cancellation, depletion, replacement and global workplace conflicts.
 - M2B A* and diagonal movement — accepted: native octile A*, strict corner rules, weak revision cache, movement edge validation and weighted job choices. Independent Dijkstra/worker regression suite passes 366 checks. Full suite 658/0, scripts 40/0; GPU worker scenario confirms diagonal travel and 400 gold deposited without loss. Independent review approved.
 - M2A worker excavation/mining — accepted: core path/economy contracts, separate job board/behavior module, worker animation/cargo, loose gold/treasury and real HUD complete. Independent review approved; 240 checks pass and 37 scripts validate. GPU scenario dug stone and deposited exactly 400 finite gold with conservation checked every tick. Leveling remains follow-up per user sequencing.
@@ -280,18 +292,25 @@ Gate: exported build supports the complete loop with cohesive presentation, reli
 
 - Treasury: build now; costs stored gold and supplies finite storage capacity.
 - Each Treasury tile has its own gold stock and capacity. Workers spread deliveries across tiles with space. Configurable fullness thresholds display coin piles, small chests and large chests. Selling storage spills its contents as recoverable loose gold. The user chose a 50% construction-cost refund per tile, including starting room tiles; refund fills remaining storage or becomes loose gold if capacity is unavailable. Sale refunds are an explicit economy source in conservation checks.
-- Lair: next room role for resting and beds; detailed rules await discussion.
+- Lair: approved for M3A; residents establish personal nests, with species-defined bed footprints rather than a universal one-bed-per-tile rule.
 - Hatchery / food room: next room role for physical food production; name and theme await lore discussion.
+- Approved direction: basic Hatchery/Pig Pen food can be eaten directly; a later Dining Hall combines cooking stations and tables for prepared meals with better hunger value/mood. Creatures need cooking capabilities. Other specialists can craft doors and room machinery in later packages; no wood/stone currencies are added.
+- Approved creature requirements: bed size, meal amount and desired gold wages vary by species. Only bed/rest behavior is active in M3A; food production/consumption and wage payment require dedicated verified packages.
+- Rooms need recognizable floor and wall art, supplied by definitions and updated with terrain/room edits. Keep diggable gold/gems recognizable and navigation independent of decorative meshes.
+- User approved a dungeon community of specialists: some creatures work, others fight, with overlapping capabilities possible. Preserve keeper/Heart/portal identity; active cooking/crafting/combat belong to later packages.
+- User requested icon-led build choices and creature overview, with details in tooltips, and right-click cancellation back to the default keeper action. M3A includes these controls without changing default excavation.
+- Follow-up: a tabbed hub replaces the verbose footer/right sidebar. Creatures is the default tab; one species portrait carries its population count. Rooms shows one icon per type with the number of connected rooms; tile totals/capacity remain in tooltips. Debug/control text belongs to the F3 window.
+- Follow-up: personal bed reservations only hold space for capacity. The creature walks to the reserved footprint and claims it locally before the bed appears. Existing open terrain still needs no claiming.
 - Later rooms should follow gameplay needs after the pet-dungeon loop works. These roles do not authorize implementing additional rooms in M2D.
 
 For each future package record: ID, objective, implementer, reviewer, owned files, dependencies, acceptance checks and status.
 
 ## Latest handoff
 
-- Completed: modular Treasury Build/Sell, no claiming step, four-connected room groups, physical per-tile storage and balanced hauling, gold pile/small/large chest stages, exact costs and 50% refunds with capacity-safe spill. Existing excavation, A* diagonals and four-sided mining remain verified. Work-based leveling remains planned, not implemented.
-- Verification: `tools/dev.ps1 check` validates 48 scripts; `tools/dev.ps1 test` passes 870 checks. Independent core/input/worker/visual reviews approved. GPU captures show three gold stages, Build/Sell previews, exact refund/spill and stage changes after spending; all 11 probe flags pass. See `docs/VERIFICATION.md`.
-- Known limits: no Lair/food mechanics, creature needs/recruitment, XP/levels or saves. Treasury cost 50/tile and capacity 500/tile are provisional balance values; chest thresholds are 35%/75%. Deposit transfer remains instantaneous. Native physical input automation remains unavailable; export templates absent. The user tried the restarted build and reported it looks good. This checkpoint is tracked in Git history.
-- Next action: commit/push as requested, then discuss the current stage, starter room roles and lore before implementing Lair, food and portal attraction. Do not begin these automatically.
+- Completed: indestructible bedrock for borders/arbitrary scenario patterns, with distinct solid rendering and shared raised targeting, plus a recognizable Lair bed icon. Existing local-home Grubbin/rest, tabbed hub, full-Treasury mining pause, A*/Treasury/Sell and work/rest priority remain verified.
+- Verification: `tools/dev.ps1 check` validates 64 scripts; `tools/dev.ps1 test` passes 1,249 checks. Independent core/behavior/input/visual reviews approved. Bedrock GPU15/0 and actual icon capture pass; the earlier local-bed/hub GPU26flags plus two sleep entries remain recorded. Border/internal pattern, blocked/mixed selection, matching crown height and bed-icon readability inspected. See `docs/VERIFICATION.md`.
+- Known limits: prototype allows one Grubbin; food and wage requirements are data only, with no active food/mood/wage/cooking/crafting/combat/XP or saves. Second species and keeper pickup/drop remain pending. Room prices, rest rates and storage thresholds are provisional. Native physical input automation remains unavailable; export templates absent. The user tried the updated build and approved this checkpoint for Git; refer to Git history for its revision.
+- Next action: commit/push as requested, then discuss current progress and the basic food-production/eating loop, specialist roles and remaining pet-dungeon work. No further implementation is authorized by this handoff; await the next direction.
 
 ## Later backlog
 

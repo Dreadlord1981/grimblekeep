@@ -39,6 +39,12 @@ func get_creature(id: StringName) -> CreatureDefinition:
 	return _creatures.get(id)
 
 
+func get_creatures() -> Array[CreatureDefinition]:
+	var definitions: Array[CreatureDefinition] = []
+	definitions.assign(_creatures.values())
+	return definitions
+
+
 func get_room(id: StringName) -> RoomDefinition:
 	return _rooms.get(id)
 

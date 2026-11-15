@@ -57,7 +57,14 @@ func _test_build_transactions() -> void:
 	var before := rooms.tiles.duplicate()
 	_check(not rooms.build(&"foundation.treasury", too_large).success and rooms.tiles == before and economy.spent_gold == 100, "Unaffordable drag is atomic, without partial spending or construction")
 	_check(not rooms.build(&"missing.room", [Vector2i(4, 1)]).success, "Unknown room types are rejected")
-	_check(not rooms.build(&"foundation.lair", [Vector2i(4, 1)]).success, "Unreleased room definitions stay unavailable")
+	var hidden := RoomDefinition.new()
+	hidden.id = &"room_tests.hidden"
+	hidden.buildable = false
+	var module := ContentModule.new()
+	module.id = &"room_tests.unreleased"
+	module.definitions = [hidden]
+	context.registry.register_module(module)
+	_check(not rooms.build(hidden.id, [Vector2i(4, 1)]).success, "Unreleased room definitions stay unavailable")
 	context.grid.set_tile(Vector2i(4, 2), DungeonGrid.Tile.HEART)
 	context.grid.set_tile(Vector2i(5, 2), DungeonGrid.Tile.PORTAL)
 	_check(not rooms.quote_build(&"foundation.treasury", [Vector2i(4, 2), Vector2i(5, 2)]).valid, "Room placement protects Heart and portal")

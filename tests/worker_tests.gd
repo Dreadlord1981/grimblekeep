@@ -246,13 +246,13 @@ func _test_missing_treasury() -> void:
 	var context: GameContext = scene.context
 	context.economy.treasury_cells.clear()
 	context.mark_excavation([Vector2i(6, 2)])
-	_check(_until(scene, func() -> bool: return context.grid.is_walkable(Vector2i(6, 2))), "Worker can finish mining when treasury is absent")
-	_advance(scene, 2.0)
-	_check(not context.economy.ground_gold.is_empty(), "No treasury leaves visible loose gold")
+	_advance(scene, 3.0)
+	_check(context.economy.remaining_gold.get(Vector2i(6, 2), 0) == GoldEconomy.GOLD_PER_SEAM and context.grid.get_tile(Vector2i(6, 2)) == DungeonGrid.Tile.GOLD, "Worker leaves the seam untouched when no treasury can receive gold")
+	_check(context.economy.ground_gold.is_empty() and context.actors[0].carried_gold == 0, "Missing treasury produces no newly mined piles or cargo")
 	_check(context.economy.stored_gold == 0, "No treasury never grants spendable gold")
 	_check(scene.feature.job_board.active_job_count() == 0, "Missing storage does not cause endless pickup/drop jobs")
 	context.economy.treasury_cells = [Vector2i(1, 2)]
-	_check(_until(scene, func() -> bool: return context.economy.stored_gold == GoldEconomy.GOLD_PER_SEAM), "Returning treasury triggers collection and deposit of loose gold")
+	_check(_until(scene, func() -> bool: return context.economy.stored_gold == GoldEconomy.GOLD_PER_SEAM), "Returning treasury resumes the retained mining order and deposits its gold")
 	_finish(scene, "Missing/reappearing treasury")
 
 

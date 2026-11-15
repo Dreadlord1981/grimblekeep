@@ -18,6 +18,7 @@ var yaw := 0.30
 var pitch := 0.90
 var distance := 31.0
 var ui_hit_test: Callable
+var pointer_position := Vector2.ZERO
 var build_room_id: StringName = &""
 var removing_rooms := false
 var _overlay: Node3D
@@ -62,6 +63,10 @@ func _input(event: InputEvent) -> void:
 	# GUI controls may consume release events. Cancel here before GUI handling so
 	# dragging from the world onto a panel cannot leave a stale pending operation.
 	if context == null:
+		return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed and is_constructing():
+		exit_construction()
+		get_viewport().set_input_as_handled()
 		return
 	if event is InputEventMouse or event is InputEventKey:
 		var previous_mode := _hover_mode
@@ -237,6 +242,7 @@ func _construction_cells(first: Vector2i, last: Vector2i) -> Array[Vector2i]:
 
 
 func _update_pointer_preview(screen: Vector2) -> void:
+	pointer_position = screen
 	var cell := INVALID_CELL if is_pointer_over_ui(screen) else get_target_cell(screen)
 	if cell == context.hovered_cell and (_drag_start == INVALID_CELL or _drag_end == cell):
 		return

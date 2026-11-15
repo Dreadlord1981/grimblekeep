@@ -46,7 +46,7 @@ Node receiver so Godot disconnects them when the feature is freed.
 The original `wander_feature.gd` remains a small test/example feature but is no
 longer in the foundation manifest. `worker_feature.gd` now owns worker movement;
 do not enable both for the same actors.
-The context publishes `actor_added`, `excavation_marks_changed`, and `simulation_ticked`;
+The context publishes `actor_added`, `actor_removed`, `excavation_marks_changed`, and `simulation_ticked`;
 the grid publishes `tile_changed`. Define new events/contracts deliberately when
 new systems require them rather than building a generic global event bus.
 
@@ -134,8 +134,29 @@ Finite storage prefers the least-filled reachable tile, then weighted route cost
 partial deposits retain the remaining cargo. If no free storage is reachable,
 workers leave recoverable loose piles and avoid pickup/drop loops. Sale refunds
 credit remaining storage directly or drop at the sold tile when full.
+Mineral job discovery and active-strike validation both require reachable free
+storage. When full/missing/unreachable, gold/gem extraction pauses without clearing
+the marks, and spending or expansion resumes it through bounded polling. Stone
+excavation remains available. Existing cargo/loose gold is preserved; in-transit
+cargo is not forecast as a reservation against capacity.
 
 ## Room commands and extension boundary
+
+Terrain distinguishes `is_solid()` from `can_excavate()`. `BEDROCK` appends numeric
+ID6 after the original terrain IDs; it is raised/solid but never walkable or eligible
+for excavation, mining or room construction. Its fixed `surface_height()`2.15 is
+shared by rendering/picking. Views must not treat `not can_excavate()` as open floor;
+mineral/rubble exposure uses authoritative walkability. Bedrock is batched separately
+with a flat crown and layered bands. Room wall dressing only covers ordinary rock,
+so indestructible terrain remains recognizable.
+
+The starting scenario paints a one-cell bedrock border and a small interior shape.
+`add_bedrock_border(grid, thickness)` and `paint_bedrock(grid, cells)` are trusted
+level-authoring helpers; invalid pattern coordinates reject the whole pattern.
+Core `set_tile()` remains a trusted terrain editing API, so level authors/tests can
+replace bedrock deliberately. Player excavation has no such authority. Existing
+mark/job/room/bed invalidation and revision-aware A* handle terrain changes without
+new view-driven gameplay rules.
 
 `DungeonRooms` owns `tiles: cell -> definition_id`. Any empty `FLOOR` is eligible
 immediately after digging. Heart, portal and solid terrain remain protected.
@@ -168,6 +189,78 @@ to `DungeonRoomView`. Gold props read each actual tile balance and the definitio
 small/large chest thresholds. New room mechanics can observe this state through
 feature modules. Independent tests build a new room and storage type, including
 their toolbar entries, without adding ID switches to core or presentation.
+
+## Residents, personal beds and rest ownership
+
+`CreatureDefinition` supplies `bed_size`, `rest_room_tag`, normalized initial
+energy, drain/recovery rates and sleep/wake thresholds. Only creatures with the
+`rest` capability participate. `food_per_meal` and `wage_gold` are future species
+requirements, not active consumers. Zero `portal_population_limit` disables
+automatic arrivals; the first Grubbin definition currently limits arrivals to one.
+
+`DungeonBeds` owns personal `BedState` objects by actor ID. It fits every cell of
+the rectangular footprint inside the same connected room whose definition has
+the required tag, excluding other personal footprints. It checks A* reachability,
+compares weighted route costs and stores physical cells rather than transient room
+group references. New reservations are pending: `BedState.established=false`.
+They exclude rival footprints and gate arrivals but do not produce bed meshes.
+The resident goes straight to the space, even while healthy, and performs a short
+local `claiming_bed` action. `DungeonBeds.establish(actor)` validates the physical
+owner, definition/footprint and proximity to the footprint center using shared
+`CLAIM_DISTANCE`; remote commands fail. Only successful establishment publishes
+the visible cot. Displacement, replacement or cancellation resets claim progress.
+Harmless group merges retain personal ownership; selling or
+blocking any footprint cell invalidates the whole bed. `beds.changed` updates
+presentation/HUD. Removed actors release beds; periodic pruning also handles
+direct actor-array edits and lost capabilities. Oversized footprints fail before
+scanning cells.
+
+`ResidentFeature` handles existing residents before scanning portals for a free,
+reachable fitting bed. A bounded arrival scan creates at most one actor, reserves
+pending space immediately and rolls back a failed spawn reservation. No arrival
+creates gold. `ResidentBehavior` handles exploration, fatigue, travel, sleeping and
+waking using strict A* edge validation and world-distance movement. Even-size beds
+use their actual center, reached through validated floor before the final segment.
+No bed/path means bounded retries and an explicit unmet-bed state, not wall crossing.
+
+The manifest ticks resident needs **before** worker jobs. `rest_requested` gives
+rest control of movement while traveling/sleeping or seeking a needed bed. A
+multi-talent awake worker keeps its work behavior; rest only updates its needs.
+When rest takes priority, `WorkerFeature` releases the current job reservation,
+retains cargo and preserves resident action/target state. It resumes ordinary work
+after waking. Future cooking/crafting/combat consumers must respect the same
+ownership contract or deliberately extend it with reviewed arbitration.
+
+`GameContext.despawn_creature()` releases beds and retains carried gold in the
+economy until a worker can safely recover it. The worker feature clears this
+pending entry after recovery, including feature reloads.
+
+## Room art and desktop icon controls
+
+Room definitions supply `floor_style`, `wall_style`, colors and optional per-tile
+`view_scene` / per-wall `wall_scene`. Built-in style keys describe reusable visual
+skins; there are no stable room-ID dispatch switches. Wall decoration appears
+only on neighboring rock faces, never over exposed gold/gems or open passages.
+Rooms, beds, terrain and excavation marks trigger deferred refreshes. Marked wall
+faces leave dressing hidden so the authoritative top/side glow stays visible.
+
+Personal cots and the Grubbin are original procedural low-poly assets derived
+from the approved concept. Creature `view_scene` may implement `sync(actor)` and
+optional `setup_context(context)` to read session state without deciding gameplay.
+The Grubbin uses this to fit its sleep/wake pose to its own cot.
+
+`RoomDefinition.icon` and `CreatureDefinition.portrait` supply textures for the
+tabbed `DungeonHub` in the bottom HUD. It defaults to Creatures, with one portrait
+per definition and an overlaid population count. Rooms shows one icon per buildable
+type with connected-group count; tooltips distinguish tile totals, actual gold
+capacity/stock and pending/established beds. `ui/dungeon_hub.gd` owns these cards
+and publishes tab/tool intents; it does not run simulation. Switching to Creatures
+cancels construction while preserving dig marks. No fixed right sidebar or verbose
+footer remains. Individual energy/work/bed cards and controls live in the hidden
+F3 debug window; concise construction quotes follow the cursor. Original SVG assets
+in `assets/ui` supply replaceable icons. A
+right-click during construction cancels pending drag before GUI consumption and
+returns to excavation; default RMB camera orbit remains outside construction.
 
 The dungeon view batches dirty terrain updates per frame and preserves unrelated
 landmarks/heartbeat when workers clear stone. Gold piles/treasury presentation

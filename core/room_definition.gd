@@ -12,7 +12,14 @@ extends Resource
 @export_range(0.01, 1.0) var storage_small_chest_ratio: float = 0.35
 @export_range(0.01, 1.0) var storage_large_chest_ratio: float = 0.75
 @export var floor_color: Color = Color(0.28, 0.24, 0.22)
+@export var tags: Array[StringName] = []
+@export var floor_style: StringName = &"flagstone"
+@export var wall_style: StringName
+@export var wall_color := Color(0.24, 0.22, 0.25)
+@export var accent_color := Color(0.55, 0.42, 0.23)
+@export var wall_scene: PackedScene
 @export var view_scene: PackedScene
+@export var icon: Texture2D
 
 
 func validation_error() -> String:

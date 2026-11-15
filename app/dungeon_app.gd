@@ -41,7 +41,7 @@ func _ready() -> void:
 	hud.setup(context, controller)
 	if "--capture" in OS.get_cmdline_user_args():
 		_capture_frame = 90
-	print("GRIMBLEKEEP ready | modules=%d | actors=%d | milestone=2-construction" % [registry.module_count(), context.actors.size()])
+	print("GRIMBLEKEEP ready | modules=%d | actors=%d | milestone=3-lair" % [registry.module_count(), context.actors.size()])
 
 
 func _physics_process(delta: float) -> void:

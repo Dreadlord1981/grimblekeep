@@ -85,6 +85,12 @@ func _handle_idle(definition: CreatureDefinition) -> void:
 	actor.action = &"idle"
 	actor.job_label = "Awaiting reachable work"
 	if actor.carried_gold <= 0:
+		if &"excavate" in definition.capabilities:
+			for target in _context.excavation_marks:
+				if _context.grid.get_tile(target) in [DungeonGrid.Tile.GOLD, DungeonGrid.Tile.GEM]:
+					if not _board.has_reachable_treasury(_context.grid.world_to_cell(actor.position)):
+						actor.job_label = "Waiting for reachable Treasury space"
+					break
 		return
 	var start := _context.grid.world_to_cell(actor.position)
 	if &"haul" not in definition.capabilities or not _board.has_reachable_treasury(start):
@@ -97,7 +103,9 @@ func _job_is_valid(definition: CreatureDefinition) -> bool:
 	if not _board.owns(actor.id, job) or not _context.grid.is_walkable(job.work_cell):
 		return false
 	if job.kind == &"excavate":
-		return &"excavate" in definition.capabilities and _context.excavation_marks.has(job.target_cell) and _context.grid.get_tile(job.target_cell) == job.terrain_kind and _context.grid.can_excavate(job.target_cell)
+		if &"excavate" not in definition.capabilities or not _context.excavation_marks.has(job.target_cell) or _context.grid.get_tile(job.target_cell) != job.terrain_kind or not _context.grid.can_excavate(job.target_cell):
+			return false
+		return job.terrain_kind == DungeonGrid.Tile.ROCK or _board.has_reachable_treasury(job.work_cell)
 	if job.kind == &"haul":
 		return &"haul" in definition.capabilities and _context.economy.ground_gold.get(job.target_cell, 0) > 0 and _board.has_reachable_treasury(job.target_cell)
 	return &"haul" in definition.capabilities and actor.carried_gold > 0 and _context.economy.available_storage(job.target_cell) > 0

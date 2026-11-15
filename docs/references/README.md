@@ -10,3 +10,11 @@ It is visual reference only, not a screenshot of the implemented game or a usabl
 resources. Subsequent user approval permits simpler retro low-poly graphics for
 the first playable version. Current runtime assets are original procedural meshes
 and materials made in `presentation/` and the drawn hand in `ui/keeper_hand.gd`.
+
+`grubbin-lair-concept.png` was generated in the project conversation on 2026-11-15
+with OpenAI's built-in image-generation tool and approved by the user. Source:
+`exec-c29bacb1-880d-4aef-a85a-a7a268946e69.png`. It shows the moss-green Grubbin,
+shabby personal cot, patched bedding and domestic dark humor. This is visual
+reference, not a game screenshot or an imported 3D asset. The playable Grubbin,
+beds and room dressing are original procedural low-poly meshes. `LORE.md` records
+accepted direction separately from open world-building questions.

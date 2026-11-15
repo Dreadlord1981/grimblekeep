@@ -159,6 +159,7 @@ func _test_shared_workplace() -> void:
 		context.grid.set_tile(cell, DungeonGrid.Tile.ROCK)
 	for x in range(1, 4):
 		context.grid.set_tile(Vector2i(x, 3), DungeonGrid.Tile.FLOOR)
+	context.economy.treasury_cells = [Vector2i(1, 3)]
 	context.grid.set_tile(Vector2i(4, 3), DungeonGrid.Tile.GOLD)
 	context.grid.set_tile(Vector2i(3, 4), DungeonGrid.Tile.GOLD)
 	context.actors[0].position = context.grid.cell_to_world(Vector2i(1, 3))

@@ -21,8 +21,13 @@ func _run() -> void:
 	_create_fixture()
 	await process_frame
 	await process_frame
+	_check(_hud.active_tab == &"creatures", "Creatures overview is the default hub tab")
+	_ui_click(_hud.get("_rooms_tab_button"))
+	await process_frame
+	_check(_hud.active_tab == &"rooms", "Viewport Rooms tab reveals construction choices")
 	var buttons: Dictionary = _hud.get("_construction_buttons")
 	_check(buttons.has(TREASURY) and buttons.has(NEST) and not buttons.has(HIDDEN), "Toolbar discovers buildable room definitions and hides unavailable types")
+	_check("Gold 100 / 200" in buttons[TREASURY].tooltip_text, "Treasury tooltip reports real per-tile stock and gold capacity")
 	_context.mark_excavation([Vector2i(8, 2)])
 	_ui_click(buttons[TREASURY])
 	_check(_controller.build_room_id == TREASURY, "Viewport toolbar click enters Treasury construction")
@@ -53,6 +58,7 @@ func _run() -> void:
 	_click(EXCAVATED_CELL)
 	_check(_context.rooms.tiles.get(EXCAVATED_CELL) == TREASURY, "Newly excavated floor immediately accepts room construction")
 	_test_ui_cancellation()
+	_test_right_click_cancel()
 	_key(KEY_ESCAPE)
 	_check(not _controller.is_constructing(), "Escape exits construction")
 	_check(_context.excavation_marks.has(Vector2i(8, 2)), "Escape from construction preserves excavation orders")
@@ -167,6 +173,38 @@ func _test_tool_change_cancellation() -> void:
 	_controller.set_sell_rooms()
 	_mouse(_screen(Vector2i(3, 5)), false)
 	_check(_context.rooms.tiles.has(Vector2i(3, 5)), "Switching tools cancels a pending drag before another tool can commit it")
+
+
+func _test_right_click_cancel() -> void:
+	var stock := _context.economy.stored_gold
+	var tiles := _context.rooms.tiles.size()
+	_mouse(_screen(Vector2i(6, 3)), true)
+	_right_click(_hud.get("_sell_button").get_global_rect().get_center())
+	_check(not _controller.is_constructing() and _controller.get("_drag_start") == KeeperController.INVALID_CELL, "Right-click over UI cancels an active build tool and its held drag")
+	_mouse(_screen(Vector2i(6, 3)), false)
+	_check(_context.rooms.tiles.size() == tiles and _context.economy.stored_gold == stock, "Left release after right-click cancellation cannot build or spend")
+	_controller.set_sell_rooms()
+	_mouse(_screen(Vector2i(3, 5)), true)
+	_right_click(_screen(Vector2i(3, 5)))
+	_mouse(_screen(Vector2i(3, 5)), false)
+	_check(_context.rooms.tiles.has(Vector2i(3, 5)) and _context.economy.stored_gold == stock, "Right-click cancels a held Sell drag without deleting or refunding")
+	var yaw := _controller.yaw
+	var motion := InputEventMouseMotion.new()
+	motion.position = _screen(Vector2i(6, 3))
+	motion.relative = Vector2(12, 0)
+	motion.button_mask = MOUSE_BUTTON_MASK_RIGHT
+	root.push_input(motion, true)
+	_check(not is_equal_approx(yaw, _controller.yaw), "Right-button camera orbit still works outside construction")
+	_controller.yaw = yaw
+	_controller.set_build_room(TREASURY)
+
+
+func _right_click(point: Vector2) -> void:
+	var event := InputEventMouseButton.new()
+	event.position = point
+	event.button_index = MOUSE_BUTTON_RIGHT
+	event.pressed = true
+	root.push_input(event, true)
 
 
 func _test_single_sale() -> void:

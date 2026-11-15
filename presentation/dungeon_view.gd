@@ -10,6 +10,10 @@ var _actor_root: Node3D
 var _actor_views: Dictionary = {}
 var _block_mesh: ArrayMesh
 var _crystal_mesh: ArrayMesh
+var _bedrock_mesh: BoxMesh
+var _bedrock_material: StandardMaterial3D
+var _bedrock_band_material: StandardMaterial3D
+var _bedrock_crown_material: StandardMaterial3D
 var _stone_materials: Array[StandardMaterial3D] = []
 var _floor_materials: Array[StandardMaterial3D] = []
 var _gold_material: StandardMaterial3D
@@ -27,6 +31,11 @@ func setup(context: GameContext) -> void:
 	_context = context
 	_block_mesh = DungeonGeometry.chamfered_block()
 	_crystal_mesh = DungeonGeometry.octahedron()
+	_bedrock_mesh = BoxMesh.new()
+	_bedrock_mesh.size = Vector3.ONE
+	_bedrock_material = DungeonGeometry.material(Color("242d39"))
+	_bedrock_band_material = DungeonGeometry.material(Color("45515b"))
+	_bedrock_crown_material = DungeonGeometry.material(Color("303d49"))
 	for color in ["34313b", "403b43", "48414a", "37363d", "4c4148"]:
 		_stone_materials.append(DungeonGeometry.material(Color(color)))
 	for color in ["62584f", "6b5d50", "5c5551", "756454", "655d57"]:
@@ -113,6 +122,8 @@ func _add_actor(actor: CreatureState) -> void:
 	view.scale = Vector3.ONE * definition.scale_factor
 	view.position = actor.position
 	_actor_root.add_child(view)
+	if view.has_method("setup_context"):
+		view.call("setup_context", _context)
 	_actor_views[actor.id] = view
 
 
@@ -147,6 +158,9 @@ func _build_terrain() -> void:
 	var gold_transforms: Array[Transform3D] = []
 	var gem_transforms: Array[Transform3D] = []
 	var rubble_transforms: Array[Transform3D] = []
+	var bedrock_transforms: Array[Transform3D] = []
+	var bedrock_bands: Array[Transform3D] = []
+	var bedrock_crowns: Array[Transform3D] = []
 	var grid := _context.grid
 	for y in range(grid.height):
 		for x in range(grid.width):
@@ -154,8 +168,15 @@ func _build_terrain() -> void:
 			var tile := grid.get_tile(cell)
 			var at := grid.cell_to_world(cell)
 			var variation := posmod(x * 71 + y * 31, 5)
-			if grid.can_excavate(cell):
+			if grid.is_solid(cell):
 				var height := grid.surface_height(cell) + 0.02
+				if tile == DungeonGrid.Tile.BEDROCK:
+					var body_height := height - 0.025
+					bedrock_transforms.append(Transform3D(Basis.IDENTITY.scaled(Vector3(1.98, body_height, 1.98)), at + Vector3(0, body_height * 0.5 - 0.02, 0)))
+					for band in [0.60, 1.25, 1.85]:
+						bedrock_bands.append(Transform3D(Basis.IDENTITY.scaled(Vector3(1.995, 0.045, 1.995)), at + Vector3(0, band, 0)))
+					bedrock_crowns.append(Transform3D(Basis.IDENTITY.scaled(Vector3(1.98, 0.025, 1.98)), at + Vector3(0, grid.surface_height(cell) - 0.0125, 0)))
+					continue
 				rock_transforms[variation].append(Transform3D(Basis.IDENTITY.scaled(Vector3(1.98, height, 1.98)), at + Vector3(0, height * 0.5 - 0.02, 0)))
 				if _touches_floor(cell):
 					var top_scale := Vector3(0.45 + variation * 0.07, 0.23, 0.4)
@@ -176,6 +197,9 @@ func _build_terrain() -> void:
 	_add_batch("Rubble", _block_mesh, _stone_materials[2], rubble_transforms)
 	_add_batch("GoldVeins", _crystal_mesh, _gold_material, gold_transforms)
 	_add_batch("GemVeins", _crystal_mesh, _gem_material, gem_transforms)
+	_add_batch("BedrockCore", _bedrock_mesh, _bedrock_material, bedrock_transforms)
+	_add_batch("BedrockStrata", _bedrock_mesh, _bedrock_band_material, bedrock_bands)
+	_add_batch("BedrockCrowns", _bedrock_mesh, _bedrock_crown_material, bedrock_crowns)
 	var slab_material := DungeonGeometry.material(Color("201e27"))
 	DungeonGeometry.box(_terrain, Vector3(grid.width * 2.0, 0.8, grid.height * 2.0), Vector3((grid.width - 1), -0.59, (grid.height - 1)), slab_material)
 
@@ -183,9 +207,8 @@ func _build_terrain() -> void:
 func _touches_floor(cell: Vector2i) -> bool:
 	for direction in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
 		var neighbor: Vector2i = cell + direction
-		if _context.grid.is_inside(neighbor):
-			if not _context.grid.can_excavate(neighbor):
-				return true
+		if _context.grid.is_walkable(neighbor):
+			return true
 	return false
 
 
@@ -194,9 +217,7 @@ func _crystals_at_cell(cell: Vector2i, transforms: Array[Transform3D], height: f
 	var offsets := [Vector3(-0.63, height + 0.03, 0.25), Vector3(0.1, height + 0.14, -0.36), Vector3(0.58, height + 0.04, 0.2)]
 	for direction in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
 		var neighbor: Vector2i = cell + direction
-		if not _context.grid.is_inside(neighbor):
-			continue
-		if _context.grid.can_excavate(neighbor):
+		if not _context.grid.is_walkable(neighbor):
 			continue
 		for index in range(4):
 			var tangent := Vector3(-direction.y, 0, direction.x)

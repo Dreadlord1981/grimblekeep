@@ -1,9 +1,15 @@
-[gd_resource type="Resource" script_class="ContentModule" load_steps=8 format=3]
+[gd_resource type="Resource" script_class="ContentModule" load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://core/content_module.gd" id="1"]
 [ext_resource type="Script" path="res://core/creature_definition.gd" id="2"]
 [ext_resource type="Script" path="res://core/room_definition.gd" id="3"]
 [ext_resource type="Script" path="res://content/features/worker_feature.gd" id="4"]
+[ext_resource type="Script" path="res://content/features/resident_feature.gd" id="5"]
+[ext_resource type="PackedScene" path="res://scenes/creatures/grubbin.tscn" id="6"]
+[ext_resource type="Texture2D" path="res://assets/ui/room_treasury.svg" id="7"]
+[ext_resource type="Texture2D" path="res://assets/ui/room_lair.svg" id="8"]
+[ext_resource type="Texture2D" path="res://assets/ui/portrait_imp.svg" id="9"]
+[ext_resource type="Texture2D" path="res://assets/ui/portrait_grubbin.svg" id="10"]
 
 [sub_resource type="Resource" id="Imp"]
 script = ExtResource("2")
@@ -13,25 +19,50 @@ body_color = Color(0.64, 0.22, 0.15, 1)
 scale_factor = 0.85
 move_speed = 2.8
 capabilities = Array[StringName]([&"excavate", &"haul"])
+portrait = ExtResource("9")
 
 [sub_resource type="Resource" id="Treasury"]
 script = ExtResource("3")
 id = &"foundation.treasury"
 display_name = "Treasury"
+icon = ExtResource("7")
 gold_cost_per_tile = 50
 gold_storage_per_tile = 500
 floor_color = Color(0.30, 0.24, 0.14, 1)
+floor_style = &"inlaid_tiles"
+wall_style = &"brass_panels"
+wall_color = Color(0.24, 0.22, 0.25, 1)
+accent_color = Color(0.65, 0.47, 0.20, 1)
 
 [sub_resource type="Resource" id="Lair"]
 script = ExtResource("3")
 id = &"foundation.lair"
 display_name = "Lair"
+icon = ExtResource("8")
 gold_cost_per_tile = 50
-buildable = false
-floor_color = Color(0.22, 0.17, 0.21, 1)
+tags = Array[StringName]([&"lair"])
+floor_color = Color(0.25, 0.19, 0.23, 1)
+floor_style = &"patched_rugs"
+wall_style = &"patched_hangings"
+wall_color = Color(0.23, 0.19, 0.24, 1)
+accent_color = Color(0.40, 0.25, 0.19, 1)
+
+[sub_resource type="Resource" id="Grubbin"]
+script = ExtResource("2")
+id = &"foundation.grubbin"
+display_name = "Grubbin"
+body_color = Color(0.39, 0.46, 0.22, 1)
+view_scene = ExtResource("6")
+portrait = ExtResource("10")
+move_speed = 2.2
+capabilities = Array[StringName]([&"rest"])
+initial_energy = 0.45
+portal_population_limit = 1
+food_per_meal = 1
+wage_gold = 2
 
 [resource]
 script = ExtResource("1")
 id = &"foundation"
-definitions = Array[Resource]([SubResource("Imp"), SubResource("Treasury"), SubResource("Lair")])
-feature_scripts = Array[Script]([ExtResource("4")])
+definitions = Array[Resource]([SubResource("Imp"), SubResource("Treasury"), SubResource("Lair"), SubResource("Grubbin")])
+feature_scripts = Array[Script]([ExtResource("5"), ExtResource("4")])

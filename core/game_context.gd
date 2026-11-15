@@ -3,6 +3,7 @@ extends RefCounted
 ## Explicit session dependencies and events shared by features and views.
 
 signal actor_added(actor: CreatureState)
+signal actor_removed(actor: CreatureState)
 signal excavation_marks_changed(cell: Vector2i)
 signal simulation_ticked(delta: float)
 
@@ -13,6 +14,7 @@ var registry: ContentRegistry
 var actors: Array[CreatureState] = []
 var economy: GoldEconomy
 var rooms: DungeonRooms
+var beds: DungeonBeds
 var last_marked_cell := Vector2i(-1, -1)
 var excavation_marks: Dictionary[Vector2i, bool] = {}
 var hovered_cell := Vector2i(-1, -1)
@@ -25,6 +27,7 @@ func _init(dungeon_grid: DungeonGrid = null, content_registry: ContentRegistry =
 	economy = GoldEconomy.new(grid)
 	if grid != null:
 		rooms = DungeonRooms.new(grid, registry, economy)
+		beds = DungeonBeds.new(grid, rooms, registry)
 		grid.tile_changed.connect(_on_terrain_changed)
 
 
@@ -37,10 +40,23 @@ func spawn_creature(definition_id: StringName, cell: Vector2i) -> CreatureState:
 	actor.id = _next_actor_id
 	_next_actor_id += 1
 	actor.definition_id = definition_id
+	actor.energy = registry.get_creature(definition_id).initial_energy
 	actor.position = grid.cell_to_world(cell)
 	actors.append(actor)
 	actor_added.emit(actor)
 	return actor
+
+
+func despawn_creature(actor_id: int) -> bool:
+	for actor in actors:
+		if actor.id == actor_id:
+			# Preserve physical cargo even when no worker feature is currently loaded.
+			economy.retain_removed_actor(actor)
+			actors.erase(actor)
+			beds.release(actor_id)
+			actor_removed.emit(actor)
+			return true
+	return false
 
 
 func mark_excavation(cells: Array[Vector2i], mode: int = MarkOperation.TOGGLE) -> void:

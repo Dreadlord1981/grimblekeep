@@ -119,6 +119,10 @@ func _find_excavation(start: Vector2i, actor_id: int) -> WorkerJob:
 			var workplace: Vector2i = target + direction
 			if not _context.grid.is_walkable(workplace) or not _work_available(workplace, actor_id):
 				continue
+			# Mineral orders remain marked while storage is full or disconnected.
+			# Ordinary stone excavation does not consume Treasury capacity.
+			if _context.grid.get_tile(target) in [DungeonGrid.Tile.GOLD, DungeonGrid.Tile.GEM] and not has_reachable_treasury(workplace):
+				continue
 			var path := GridPathfinder.find_path(_context.grid, start, workplace)
 			if path.is_empty() or (best != null and GridPathfinder.path_cost(path) >= GridPathfinder.path_cost(best.path)):
 				continue
