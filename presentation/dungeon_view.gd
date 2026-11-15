@@ -49,6 +49,10 @@ func setup(context: GameContext) -> void:
 	_gold_root = Node3D.new()
 	_gold_root.name = "PhysicalGold"
 	add_child(_gold_root)
+	var rooms := DungeonRoomView.new()
+	rooms.name = "Rooms"
+	add_child(rooms)
+	rooms.setup(_context)
 	_build_lighting()
 	_build_terrain()
 	_build_landmarks()
@@ -285,36 +289,73 @@ func _apply_terrain_changes() -> void:
 
 func _refresh_gold() -> void:
 	var economy := _context.economy
-	var snapshot := str([economy.ground_gold, economy.stored_gold, economy.treasury_cells])
+	var snapshot := str([economy.ground_gold, economy.stored_by_cell, economy.treasury_cells])
 	if snapshot == _gold_snapshot:
 		return
 	_gold_snapshot = snapshot
 	for child in _gold_root.get_children():
 		child.free()
-	var trim := DungeonGeometry.material(Color("a57936"))
-	var dark := DungeonGeometry.material(Color("43362f"))
 	for cell in economy.treasury_cells:
 		if not _context.grid.is_walkable(cell):
 			continue
-		var at := _context.grid.cell_to_world(cell)
-		DungeonGeometry.box(_gold_root, Vector3(1.85, 0.035, 1.85), at + Vector3.UP * 0.055, trim)
-		DungeonGeometry.box(_gold_root, Vector3(1.65, 0.04, 1.65), at + Vector3.UP * 0.08, dark)
-	if not economy.treasury_cells.is_empty():
-		var origin := _context.grid.cell_to_world(economy.treasury_cells[0])
-		var label := Label3D.new()
-		label.text = "TREASURY"
-		label.font_size = 42
-		label.pixel_size = 0.012
-		label.position = origin + Vector3(1.0, 1.2, -0.6)
-		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		_gold_root.add_child(label)
-		if economy.stored_gold > 0:
-			_coin_pile(origin + Vector3(0, 0.15, 0), economy.stored_gold)
+		var amount: int = economy.stored_by_cell.get(cell, 0)
+		if amount > 0:
+			_storage_prop(cell, amount)
 	for cell in economy.ground_gold:
 		_coin_pile(_context.grid.cell_to_world(cell), economy.ground_gold[cell])
 
 
-func _coin_pile(at: Vector3, amount: int) -> void:
+func _storage_prop(cell: Vector2i, amount: int) -> void:
+	var root := Node3D.new()
+	root.name = "GoldStorage_%d_%d" % [cell.x, cell.y]
+	root.position = _context.grid.cell_to_world(cell) + Vector3.UP * 0.12
+	root.set_meta("gold", amount)
+	_gold_root.add_child(root)
+	var definition := _context.registry.get_room(_context.rooms.tiles.get(cell, &""))
+	var small_ratio := definition.storage_small_chest_ratio if definition != null else 0.35
+	var large_ratio := definition.storage_large_chest_ratio if definition != null else 0.75
+	var capacity := _context.economy.storage_capacity(cell)
+	var fullness := float(amount) / float(capacity) if capacity > 0 else 0.0
+	if fullness < small_ratio:
+		root.set_meta("stage", &"pile")
+		_coin_pile(root.position, amount, root)
+	else:
+		var large := fullness >= large_ratio
+		root.set_meta("stage", &"large_chest" if large else &"small_chest")
+		_build_chest(root, large)
+
+
+func _build_chest(root: Node3D, large: bool) -> void:
+	# Chunky worn boards and iron bands keep the two silhouettes readable in play.
+	var wood := DungeonGeometry.material(Color("69452e"))
+	var dark_wood := DungeonGeometry.material(Color("422d24"))
+	var iron := DungeonGeometry.material(Color("302b30"))
+	var brass := DungeonGeometry.material(Color("b58a47"))
+	var size := 1.0 if large else 0.68
+	root.scale = Vector3.ONE * size
+	DungeonGeometry.box(root, Vector3(1.32, 0.48, 0.92), Vector3(0, 0.29, 0), wood)
+	var lid := DungeonGeometry.cylinder(root, 0.46, 1.31, Vector3(0, 0.52, 0), dark_wood, -1.0, 8)
+	lid.rotation.z = PI * 0.5
+	lid.scale.z = 0.72
+	for side in [-1, 1]:
+		DungeonGeometry.box(root, Vector3(0.13, 0.55, 0.96), Vector3(side * 0.43, 0.30, 0), iron)
+		var band := DungeonGeometry.cylinder(root, 0.48, 0.135, Vector3(side * 0.43, 0.52, 0), iron, -1.0, 8)
+		band.rotation.z = PI * 0.5
+		band.scale.z = 0.72
+		for bolt_z in [-1, 1]:
+			DungeonGeometry.sphere(root, Vector3(side * 0.43, 0.27, bolt_z * 0.49), Vector3.ONE * 0.10, brass, 6)
+	for board in range(3):
+		DungeonGeometry.box(root, Vector3(1.30, 0.018, 0.012), Vector3(0, 0.15 + board * 0.12, 0.47), dark_wood)
+	DungeonGeometry.box(root, Vector3(0.20, 0.24, 0.06), Vector3(0, 0.43, 0.49), brass)
+	DungeonGeometry.box(root, Vector3(0.045, 0.09, 0.02), Vector3(0, 0.44, 0.53), iron)
+	# A few bright coins identify this as a gold store, rather than generic luggage.
+	for coin in range(5 if large else 3):
+		DungeonGeometry.cylinder(root, 0.13, 0.065, Vector3(-0.43 + coin * 0.20, 0.055, 0.64), _gold_material, -1.0, 8)
+
+
+func _coin_pile(at: Vector3, amount: int, parent: Node3D = null) -> void:
+	var destination := _gold_root if parent == null else parent
+	var origin := at if parent == null else Vector3.ZERO
 	for index in range(mini(15, maxi(1, ceili(amount / 15.0)))):
 		var offset := Vector3(float(index % 3 - 1) * 0.21, 0.05 + floorf(index / 3.0) * 0.075, float(index % 2) * 0.18)
-		DungeonGeometry.cylinder(_gold_root, 0.15, 0.07, at + offset, _gold_material, -1, 8)
+		DungeonGeometry.cylinder(destination, 0.15, 0.07, origin + offset, _gold_material, -1, 8)

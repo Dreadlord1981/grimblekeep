@@ -69,21 +69,28 @@ func owns(actor_id: int, job: WorkerJob) -> bool:
 
 func has_reachable_treasury(start: Vector2i) -> bool:
 	for cell in _context.economy.treasury_cells:
-		if _context.economy.is_treasury(cell) and not GridPathfinder.find_path(_context.grid, start, cell).is_empty():
+		if _context.economy.available_storage(cell) > 0 and not GridPathfinder.find_path(_context.grid, start, cell).is_empty():
 			return true
 	return false
 
 
 func _find_deposit(start: Vector2i, actor_id: int) -> WorkerJob:
 	var best: WorkerJob
+	var best_fill := INF
+	var finite_storage := _context.economy.treasury_capacity >= 0
 	for cell in _context.economy.treasury_cells:
-		if not _context.economy.is_treasury(cell) or not _work_available(cell, actor_id):
+		if _context.economy.available_storage(cell) <= 0 or not _work_available(cell, actor_id):
 			continue
 		var path := GridPathfinder.find_path(_context.grid, start, cell)
-		if path.is_empty() or (best != null and GridPathfinder.path_cost(path) >= GridPathfinder.path_cost(best.path)):
+		var capacity := _context.economy.storage_capacity(cell)
+		var fill := float(_context.economy.stored_by_cell.get(cell, 0)) / float(capacity) if finite_storage and capacity > 0 else 0.0
+		if path.is_empty() or fill > best_fill:
+			continue
+		if best != null and is_equal_approx(fill, best_fill) and GridPathfinder.path_cost(path) >= GridPathfinder.path_cost(best.path):
 			continue
 		best = WorkerJob.new(&"deposit", cell, cell)
 		best.path = path
+		best_fill = fill
 	return best
 
 

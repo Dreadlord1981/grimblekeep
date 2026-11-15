@@ -12,6 +12,7 @@ var grid: DungeonGrid
 var registry: ContentRegistry
 var actors: Array[CreatureState] = []
 var economy: GoldEconomy
+var rooms: DungeonRooms
 var last_marked_cell := Vector2i(-1, -1)
 var excavation_marks: Dictionary[Vector2i, bool] = {}
 var hovered_cell := Vector2i(-1, -1)
@@ -23,6 +24,7 @@ func _init(dungeon_grid: DungeonGrid = null, content_registry: ContentRegistry =
 	registry = content_registry
 	economy = GoldEconomy.new(grid)
 	if grid != null:
+		rooms = DungeonRooms.new(grid, registry, economy)
 		grid.tile_changed.connect(_on_terrain_changed)
 
 

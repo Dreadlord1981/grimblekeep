@@ -21,7 +21,7 @@ func _ready() -> void:
 			return
 		modules.append(module)
 	context = GameContext.new(Layout.create(), registry)
-	context.economy.treasury_cells.assign([Vector2i(16, 18), Vector2i(17, 18), Vector2i(16, 19), Vector2i(17, 19)])
+	Layout.setup_rooms(context)
 	for cell in [Vector2i(12, 16), Vector2i(16, 14), Vector2i(7, 15)]:
 		context.spawn_creature(&"foundation.imp", cell)
 	for module in modules:
@@ -41,7 +41,7 @@ func _ready() -> void:
 	hud.setup(context, controller)
 	if "--capture" in OS.get_cmdline_user_args():
 		_capture_frame = 90
-	print("GRIMBLEKEEP ready | modules=%d | actors=%d | milestone=2-workers" % [registry.module_count(), context.actors.size()])
+	print("GRIMBLEKEEP ready | modules=%d | actors=%d | milestone=2-construction" % [registry.module_count(), context.actors.size()])
 
 
 func _physics_process(delta: float) -> void:

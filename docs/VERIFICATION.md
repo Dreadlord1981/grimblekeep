@@ -1,9 +1,68 @@
 # Grimblekeep verification — 2026-11-15
 
-Foundation and worker digging/mining/hauling implemented locally with independent
-review. Room construction, needs, attraction, leveling and saving remain pending.
+Foundation, workers and modular Treasury Build/Sell are verified locally with
+independent review. Lair/food mechanics, needs, attraction, leveling and saving
+remain pending. Sections below the current checkpoint record earlier baselines.
 
-## A* diagonals and shared-side mining — current verification
+## Modular Treasury construction and selling — current verification
+
+`tools/dev.ps1 check`: **48 scripts, zero failures**. `tools/dev.ps1 test`:
+core 38, path/economy 20, independent pathfinding 366, targeting 49, excavation
+input 31, scene integration 10, workers 92, mining sides 52, room rules 42,
+Treasury workers 33, room input 40 and independent room review 97:
+**870 checks, zero failures**.
+
+The user's final rules supersede the earlier claiming proposal. Excavated floor
+is immediately eligible for construction, with no separate claiming jobs/state.
+Build click/drag never toggles existing room tiles off; only the explicit Sell
+tool removes them. Sales refund 50% per tile, rounded down separately, including
+starting-room salvage. Treasury cost 50/tile and capacity 500/tile are provisional.
+
+Rule scenarios cover a complete finite mining -> hauling -> construction sequence,
+authoritative quote/commit costs, duplicate cells, skipped invalid tiles, atomic
+unaffordable drags, protected landmarks, immediate eligibility after excavation,
+four-connected merge/split and diagonal separation. Independent definitions prove
+a second room and storage type can build/render through shared contracts without
+core ID switches. Input tests add a room toolbar entry from its definition and
+send actual events through the Godot Viewport, including UI crossing, tool changes,
+Esc preserving excavation orders, stationary terrain/gold preview updates, and
+Build refusing to delete existing room tiles.
+
+Storage tests cover exact per-tile limits, normalized-fill worker distribution,
+partial deliveries, concurrent reservations, full-storage no-thrash, capacity
+expansion, sale during delivery and local overflow. Sale scenarios verify initial
+room value, exactly-once refunds, half-price rounding, nearly-full remaining
+storage, the last Treasury's stock plus refund remaining on the floor, and repeated
+build/sell cycles losing the expected net amount. Conservation includes gross
+construction spending and explicit sale refunds; no untracked gold is created.
+
+GPU `tests/rooms_render_probe.gd` passed all 11 flags: deposited, stages, preview,
+built, spent, removed, refund_preview, refunded, stage_updates, conserved, captures.
+It renders the real scene, transfers finite seam supply into test stock fixtures
+to exercise the three visual stages, and sends Viewport events to build and sell.
+Ordinary worker deliveries/distribution are separately executed by the worker and
+end-to-end mining tests; the visual fixture does not claim to test that journey.
+
+Captures inspected by the lead and independent reviewers at 1280x800:
+`artifacts/rooms-overview.png`, `treasury-gold-stages.png`,
+`treasury-build-preview.png`, `treasury-built.png`, `treasury-sell-preview.png`,
+`treasury-removed-gold.png`, `treasury-stock-spent.png`.
+Each Treasury tile displays its own real stock: pile below 35%, small chest from
+35%, large chest from 75%. Spending visibly downgrades/removes props; selling a
+250-gold tile leaves exactly 250 loose gold and credits its 25-gold refund to
+remaining capacity. Paving, labels, costs/refunds and restrained desktop HUD remain
+readable. These are original procedural prototype assets, not final commercial art.
+
+Independent code reviews approved core rules, worker storage and construction
+controls. One earlier review finding about claim-only workers was fixed, then the
+entire claiming feature was removed at the user's request. No blocking findings
+remain. Native physical mouse/keyboard automation is still unavailable as recorded
+below: only Godot Viewport routing and GPU output are verified. No new performance,
+audio or standalone export gate is claimed. The user tried the restarted build
+and reported it looks good. This checkpoint is tracked in Git history; no further
+room or creature mechanic has been started.
+
+## A* diagonals and shared-side mining — earlier baseline
 
 `tools/dev.ps1 check`: 40 scripts, zero failures. Full test suite: core 38,
 path/economy 20, independent pathfinding 366, targeting 49, input 31, scene

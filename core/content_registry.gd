@@ -43,6 +43,12 @@ func get_room(id: StringName) -> RoomDefinition:
 	return _rooms.get(id)
 
 
+func get_rooms() -> Array[RoomDefinition]:
+	var definitions: Array[RoomDefinition] = []
+	definitions.assign(_rooms.values())
+	return definitions
+
+
 func module_count() -> int:
 	return _modules.size()
 

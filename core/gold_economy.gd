@@ -8,11 +8,29 @@ const GOLD_PER_SEAM := 200
 var remaining_gold: Dictionary[Vector2i, int] = {}
 var ground_gold: Dictionary[Vector2i, int] = {}
 var treasury_cells: Array[Vector2i] = []
-var stored_gold: int = 0
+var stored_by_cell: Dictionary[Vector2i, int] = {}
+var spent_gold: int = 0
+var refunded_gold: int = 0
+var stored_gold: int:
+	get:
+		var total := 0
+		for amount: int in stored_by_cell.values():
+			total += amount
+		return total
+var treasury_capacity: int:
+	get:
+		if not _room_storage:
+			return -1
+		var total := 0
+		for cell in treasury_cells:
+			total += storage_capacity(cell)
+		return total
 var gem_gold_created: int = 0
 var initial_gold: int = 0
 var pending_cargo: Dictionary[int, CreatureState] = {}
 var _grid: DungeonGrid
+var _room_storage := false
+var _storage_limits: Dictionary[Vector2i, int] = {}
 
 
 func _init(grid: DungeonGrid = null) -> void:
@@ -64,16 +82,88 @@ func is_treasury(cell: Vector2i) -> bool:
 	return _grid != null and _grid.is_walkable(cell) and cell in treasury_cells
 
 
+func storage_capacity(cell: Vector2i) -> int:
+	if not is_treasury(cell):
+		return 0
+	return _storage_limits.get(cell, 0) if _room_storage else 2147483647
+
+
+func available_storage(cell: Vector2i) -> int:
+	return maxi(0, storage_capacity(cell) - stored_by_cell.get(cell, 0))
+
+
+func configure_treasury(capacities: Dictionary[Vector2i, int]) -> void:
+	# Room state supplies physical cell capacities. Removed/overflow stock stays
+	# where it was as recoverable loose gold, never silently moved or destroyed.
+	_room_storage = true
+	_storage_limits.clear()
+	treasury_cells.clear()
+	for cell in capacities:
+		if capacities[cell] > 0 and _grid.get_tile(cell) == DungeonGrid.Tile.FLOOR:
+			_storage_limits[cell] = capacities[cell]
+			treasury_cells.append(cell)
+	for cell in stored_by_cell.keys():
+		var overflow := maxi(0, stored_by_cell[cell] - storage_capacity(cell))
+		if overflow > 0:
+			stored_by_cell[cell] -= overflow
+			ground_gold[cell] = ground_gold.get(cell, 0) + overflow
+		if stored_by_cell[cell] == 0:
+			stored_by_cell.erase(cell)
+	changed.emit()
+
+
 func deposit(cell: Vector2i, amount: int) -> bool:
-	if amount <= 0 or not is_treasury(cell):
+	if amount <= 0 or amount > available_storage(cell):
 		return false
-	stored_gold += amount
+	stored_by_cell[cell] = stored_by_cell.get(cell, 0) + amount
 	changed.emit()
 	return true
 
 
+func spend(amount: int) -> bool:
+	if amount < 0 or amount > stored_gold:
+		return false
+	if amount == 0:
+		return true
+	var remaining := amount
+	# Fixed row-major debits make transactions reproducible across group edits.
+	var cells := stored_by_cell.keys()
+	cells.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return a.y < b.y or (a.y == b.y and a.x < b.x))
+	for cell: Vector2i in cells:
+		var taken := mini(remaining, stored_by_cell[cell])
+		stored_by_cell[cell] -= taken
+		remaining -= taken
+		if stored_by_cell[cell] == 0:
+			stored_by_cell.erase(cell)
+		if remaining == 0:
+			break
+	spent_gold += amount
+	changed.emit()
+	return true
+
+
+func refund(cell: Vector2i, amount: int) -> void:
+	if amount <= 0 or _grid == null or not _grid.is_inside(cell):
+		return
+	# Salvage is an explicit source, including the scenario's starting rooms.
+	# Credit real remaining storage; if none fits, leave physical loose gold.
+	refunded_gold += amount
+	var remaining := amount
+	for treasury_cell in treasury_cells:
+		var credited := mini(remaining, available_storage(treasury_cell))
+		if credited > 0:
+			stored_by_cell[treasury_cell] = stored_by_cell.get(treasury_cell, 0) + credited
+			remaining -= credited
+		if remaining == 0:
+			break
+	if remaining > 0:
+		ground_gold[cell] = ground_gold.get(cell, 0) + remaining
+	changed.emit()
+
+
 func accounted_gold(actors: Array[CreatureState]) -> int:
-	var total := stored_gold
+	# physical + construction spent = finite supply + gem output + sale refunds
+	var total := stored_gold + spent_gold - refunded_gold
 	for amount in remaining_gold.values():
 		total += amount
 	for amount in ground_gold.values():

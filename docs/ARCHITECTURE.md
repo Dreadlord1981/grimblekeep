@@ -28,9 +28,11 @@ untrusted external mods and arbitrary schema migration are not implemented.
 
 Creatures may supply an optional `view_scene` (Node3D root). Otherwise they use the
 foundation placeholder renderer with definition color/scale. The view follows
-`CreatureState.position`, `heading` and `phase`. Room definitions establish an
-extension contract now; room building, capacity and room view instantiation are
-Milestone 2 work, not functional merely because a definition can be registered.
+`CreatureState.position`, `heading` and `phase`. Room definitions drive build
+buttons, placement cost, sale ratio, capacity, paving and optional per-tile
+`view_scene` (Node3D root). Set `buildable=false` for unreleased definitions such
+as the provisional Lair. Registering a room does not implement its specialist
+needs/production behavior; those can use a feature observing `context.rooms`.
 
 ## Add a mechanic
 
@@ -59,10 +61,10 @@ world tiles an input affects.
 The context enforces `grid.can_excavate` (stone, gold, gems) even for callers outside
 input/UI. Floor and landmarks cannot be marked. Marks are automatically removed
 when terrain becomes non-excavatable, ready for future worker/job consumers.
-They persist independently of hover/camera movement; workers and saving are later
-milestones. Room construction will have separate placement state and rules rather
-than weakening default excavation eligibility. Gem terrain is solid mineral rock,
-not a new inventory currency; no gem production system is implemented.
+They persist independently of hover/camera movement and are executed by workers.
+Room construction uses separate placement commands rather than weakening default
+excavation eligibility. Gem terrain is solid mineral rock, not a new currency;
+it produces gold slowly and remains in place.
 
 The controller publishes `preview_changed` and `get_preview_changes()` with exact
 `add`, `remove` and invalid-hover `blocked` cells. UI counts and the separate
@@ -84,7 +86,7 @@ animation and the HUD. Experience/levels are planned separately, not implemented
 - `WorkerJob` stores a target, workplace, route and kind.
 - `WorkerJobBoard` discovers reachable marked work and loose-gold/treasury jobs,
   then reserves targets and workplaces per actor. It does not move actors or mine.
-- `WorkerBehavior` validates and executes its assignment, follows cardinal routes,
+- `WorkerBehavior` validates and executes its assignment, follows safe A* routes,
   works adjacent to solid terrain, carries gold and handles interruptions.
 
 `GridPathfinder` uses authoritative walkability, not rendered meshes. It wraps
@@ -113,20 +115,59 @@ Releasing one miner retains its neighbors' reservations. All miners debit the
 same finite seam ledger; depletion changes the tile once and invalidates other
 miners' jobs. Diagonal travel never permits diagonal mining through a corner.
 
-`GoldEconomy` owns finite seam balances, loose piles, treasury cells and stored
-gold. Initially a finite gold tile contains 200 gold; workers extract 20 per strike.
-Gem nodes yield 20 more slowly and stay in place, recording generated supply
-explicitly. Neither mineral creates a separate inventory currency. No room storage
-capacity, spending, wages or save migration exists yet.
+`GoldEconomy` owns finite seam balances, loose piles, physical `stored_by_cell`
+balances, spent gold and sale refunds. `stored_gold` is a derived sum, never a
+second writable balance. Initially a finite gold tile contains 200 gold; workers
+extract 20 per strike. Gem nodes yield 20 more slowly and stay in place, recording
+generated supply explicitly. Neither mineral creates a separate inventory currency.
 
 Gold conservation after each simulation tick is:
-`unmined + carried + loose + stored + pending recovery = initial finite supply + gem generation`.
+`unmined + carried + loose + stored + pending recovery + spent = initial finite supply + gem generation + sale refunds`.
+`accounted_gold()` returns the left side minus refunds, preserving the common
+comparison against initial finite supply plus gem generation. Starting room tiles
+also have salvage value, so refunds are explicit sources, never assumed to have
+come from prior mining. Repeated sales of the same tile cannot create refunds.
 The ledger retains detached actors with cargo when no walkable drop location exists;
 the worker feature adopts this pending state on reload and retries safe recovery.
-Stored gold increases only when cargo physically reaches a valid treasury tile.
-If no treasury is reachable, workers leave recoverable loose piles and avoid
-endless pickup/drop loops. The starting treasury is scenario data; room-building
-will later supply the same storage-cell contract.
+Workers deposit only after physically reaching a Treasury tile with free space.
+Finite storage prefers the least-filled reachable tile, then weighted route cost;
+partial deposits retain the remaining cargo. If no free storage is reachable,
+workers leave recoverable loose piles and avoid pickup/drop loops. Sale refunds
+credit remaining storage directly or drop at the sold tile when full.
+
+## Room commands and extension boundary
+
+`DungeonRooms` owns `tiles: cell -> definition_id`. Any empty `FLOOR` is eligible
+immediately after digging. Heart, portal and solid terrain remain protected.
+There is no separate territory/claiming state or worker task.
+
+`quote_build()` / `quote_remove()` return unique add/remove/blocked cells, cost,
+refund, validity and reason. Mixed rectangles skip invalid cells. Build atomically
+charges all eligible cells or fails for insufficient stored gold; it revalidates
+on release. Building never removes existing rooms. Only the controller's explicit
+Sell context calls `remove()`, with click/drag feedback before release. Esc/Done
+returns to excavation while preserving excavation marks. Preview refreshes when
+terrain, rooms or the economy change under a stationary pointer.
+
+`RoomState` groups four-connected tiles of the same definition; diagonals do not
+merge. Membership, generic capacity and gold capacity rebuild after each room edit.
+Group IDs use the definition and first cell and identify the current snapshot;
+future long-lived reservations should refer to tiles, not retain a group object
+across merge/split events. `rooms.changed` announces updated state.
+
+`gold_storage_per_tile` supplies per-cell capacity through
+`economy.configure_treasury()`. Each removed tile spills its exact local stock,
+and capacity reductions spill overflow locally. Sale refunds use each room's
+`sell_refund_ratio` (0.5 by default), rounded down separately for each tile.
+Spending debits physical stock in deterministic row-major order. No wages or
+save migration are implemented yet.
+
+The starting Treasury is placed by trusted scenario `place_initial()`; ordinary
+input uses priced `build()`. Generic paving/color and optional tile scenes belong
+to `DungeonRoomView`. Gold props read each actual tile balance and the definition's
+small/large chest thresholds. New room mechanics can observe this state through
+feature modules. Independent tests build a new room and storage type, including
+their toolbar entries, without adding ID switches to core or presentation.
 
 The dungeon view batches dirty terrain updates per frame and preserves unrelated
 landmarks/heartbeat when workers clear stone. Gold piles/treasury presentation

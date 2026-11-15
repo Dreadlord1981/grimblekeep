@@ -10,6 +10,12 @@ const ACCENT := Color(0.70, 0.54, 0.29)
 var context: GameContext
 var controller: KeeperController
 var _marks: Label
+var _controls_hint: Label
+var _construction_buttons: Dictionary[StringName, Button] = {}
+var _sell_button: Button
+var _return_button: Button
+var _action_feedback: Label
+var _feedback_remaining := 0.0
 var _debug: Label
 var _debug_panel: PanelContainer
 var _root: Control
@@ -39,11 +45,18 @@ func setup(game_context: GameContext, keeper: KeeperController) -> void:
 	_root.add_child(hand)
 	context.excavation_marks_changed.connect(_refresh_marks)
 	controller.preview_changed.connect(_refresh_preview)
+	controller.construction_changed.connect(_refresh_construction)
+	controller.room_action_finished.connect(_show_room_result)
 	_refresh_marks(context.last_marked_cell)
 	_refresh_economy_and_workers()
 
 
 func _process(delta: float) -> void:
+	if _feedback_remaining > 0.0:
+		_feedback_remaining -= delta
+		if _feedback_remaining <= 0.0:
+			_action_feedback.text = "Build rooms on excavated floor"
+			_action_feedback.add_theme_color_override("font_color", MUTED)
 	_refresh_in -= delta
 	if _refresh_in <= 0.0:
 		_refresh_in = 0.15
@@ -94,16 +107,91 @@ func _build_footer() -> void:
 	panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	panel.offset_left = 16
 	panel.offset_right = -16
-	panel.offset_top = -99
+	panel.offset_top = -141
 	panel.offset_bottom = -16
 	_root.add_child(panel)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 5)
 	panel.add_child(column)
+	_build_construction_bar(column)
 	_marks = _label("KEEPER HAND  /  Click or drag rock, gold or gems to mark excavation", 16, INK)
+	_marks.add_theme_font_size_override("font_size", 14)
+	_marks.clip_text = true
 	column.add_child(_marks)
-	column.add_child(_label("Click / drag  Toggle excavation marks    ·    Green +  Mark    ·    Red X  Unmark    ·    Shift  Mark only    ·    Ctrl  Unmark only    ·    Esc  Clear", 13, INK))
-	column.add_child(_label("WASD / arrows  Pan    ·    RMB / Q E  Orbit    ·    MMB  Pan    ·    Wheel  Zoom    ·    Home  Heart    ·    F3  Diagnostics    |    WORKERS 02", 12, MUTED))
+	_controls_hint = _label("", 12, INK)
+	column.add_child(_controls_hint)
+	column.add_child(_label("WASD / arrows  Pan    ·    RMB / Q E  Orbit    ·    MMB  Pan    ·    Wheel  Zoom    ·    Home  Heart    ·    F3  Diagnostics", 12, MUTED))
+	_refresh_construction()
+
+
+func _build_construction_bar(column: VBoxContainer) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	column.add_child(row)
+	row.add_child(_label("ROOMS", 13, MUTED))
+	if context.registry != null:
+		for definition in context.registry.get_rooms():
+			if not definition.buildable:
+				continue
+			var button := _tool_button("%s  ·  %d gold / tile" % [definition.display_name, definition.gold_cost_per_tile])
+			button.tooltip_text = "Build on empty excavated floor. Drag to place several tiles."
+			button.pressed.connect(controller.set_build_room.bind(definition.id))
+			row.add_child(button)
+			_construction_buttons[definition.id] = button
+	_sell_button = _tool_button("Sell rooms")
+	_sell_button.tooltip_text = "Select Sell, then click or drag existing room tiles. Treasury tiles refund 50% of their build cost. Stored gold on sold tiles falls onto the floor; the preview shows the exact refund."
+	_sell_button.pressed.connect(controller.set_sell_rooms)
+	row.add_child(_sell_button)
+	_return_button = _tool_button("Done  [Esc]")
+	_return_button.pressed.connect(controller.exit_construction)
+	row.add_child(_return_button)
+	_action_feedback = _label("Build rooms on excavated floor", 12, MUTED)
+	_action_feedback.clip_text = true
+	_action_feedback.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_action_feedback.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	row.add_child(_action_feedback)
+
+
+func _tool_button(text: String) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.toggle_mode = true
+	button.focus_mode = Control.FOCUS_NONE
+	button.add_theme_color_override("font_color", INK)
+	button.add_theme_color_override("font_pressed_color", Color(0.98, 0.79, 0.40))
+	button.add_theme_font_size_override("font_size", 13)
+	return button
+
+
+func _refresh_construction() -> void:
+	for id in _construction_buttons:
+		_construction_buttons[id].set_pressed_no_signal(controller.build_room_id == id)
+	if _sell_button != null:
+		_sell_button.set_pressed_no_signal(controller.removing_rooms)
+	if _return_button != null:
+		_return_button.visible = controller.is_constructing()
+		_return_button.set_pressed_no_signal(false)
+	if _controls_hint != null:
+		if controller.build_room_id != &"":
+			_controls_hint.text = "Click / drag  Place on empty excavated floor    ·    Green +  Build    ·    Red X  Blocked    ·    Esc / Done  Return to excavation"
+		elif controller.removing_rooms:
+			_controls_hint.text = "Click / drag  Sell room tiles    ·    Red X  Sell    ·    Esc / Done  Return to excavation"
+		else:
+			_controls_hint.text = "Click / drag  Toggle excavation    ·    Green +  Mark    ·    Red X  Unmark    ·    Shift  Mark only    ·    Ctrl  Unmark only    ·    Esc  Clear"
+	if _marks != null:
+		_refresh_preview(controller.get_preview_changes())
+
+
+func _show_room_result(result: Dictionary) -> void:
+	_feedback_remaining = 4.0
+	var success: bool = result.get("success", false)
+	if success:
+		var count: int = result.get("remove", []).size() if controller.removing_rooms else result.get("add", []).size()
+		_action_feedback.text = "%d room tiles sold · %d gold refunded" % [count, result.get("refund", 0)] if controller.removing_rooms else "%d room tiles built · %d gold spent" % [count, result.get("cost", 0)]
+	else:
+		_action_feedback.text = result.get("reason", "Cannot change these tiles")
+	_action_feedback.tooltip_text = _action_feedback.text
+	_action_feedback.add_theme_color_override("font_color", INK if success else Color(0.97, 0.48, 0.36))
 
 
 func _build_debug() -> void:
@@ -127,7 +215,7 @@ func _build_workers() -> void:
 	panel.add_child(_worker_roster)
 	_worker_roster.add_child(_label("ACTIVE WORKERS", 14, INK))
 	var help := _label("Jobs are assigned automatically", 12, MUTED)
-	help.tooltip_text = "Workers take reachable excavation and hauling jobs. Cancel an excavation mark to stop that digging job."
+	help.tooltip_text = "Workers dig marked terrain and haul gold. Cancel an excavation mark to stop that digging job."
 	help.mouse_filter = Control.MOUSE_FILTER_PASS
 	_worker_roster.add_child(help)
 
@@ -162,7 +250,8 @@ func _refresh_economy_and_workers() -> void:
 	if context.economy != null:
 		for amount in context.economy.ground_gold.values():
 			ground += amount
-		_stored_gold.text = "STORED GOLD   %d" % context.economy.stored_gold
+		var capacity: int = context.economy.treasury_capacity
+		_stored_gold.text = "GOLD   %d / %d" % [context.economy.stored_gold, capacity] if capacity >= 0 else "STORED GOLD   %d" % context.economy.stored_gold
 	_gold_in_transit.text = "Carried %d  /  Ground %d" % [carried, ground]
 	_worker_count.text = "WORKERS   %d" % visible_workers.size()
 
@@ -172,6 +261,20 @@ func _refresh_marks(_cell: Vector2i) -> void:
 
 
 func _refresh_preview(changes: Dictionary) -> void:
+	if controller.is_constructing():
+		var valid: bool = changes.get("valid", false)
+		var reason: String = changes.get("reason", "")
+		var blocked: int = changes.get("blocked", []).size()
+		if controller.removing_rooms:
+			_marks.text = "SELL ROOMS   |   %d tiles   |   Refund %d gold   |   %s" % [changes.get("remove", []).size(), changes.get("refund", 0), reason]
+		else:
+			var definition := context.registry.get_room(controller.build_room_id)
+			_marks.text = "BUILD %s   |   %d tiles   |   Cost %d gold   |   %s" % [definition.display_name.to_upper(), changes.get("add", []).size(), changes.get("cost", 0), reason]
+		if blocked > 0:
+			_marks.text += "   |   %d blocked" % blocked
+		_marks.add_theme_color_override("font_color", INK if valid else Color(0.97, 0.48, 0.36))
+		return
+	_marks.add_theme_color_override("font_color", INK)
 	var count := context.excavation_marks.size()
 	var adding: Array = changes.get("add", [])
 	var removing: Array = changes.get("remove", [])

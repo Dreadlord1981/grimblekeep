@@ -1,11 +1,11 @@
 # Grimblekeep — shared development checklist
 
-Status: M2A digging/mining, M2B A* diagonals and M2C shared-side mining verified (2026-11-15). Stopped for the user's requested discussion.
+Status: Milestone 2 workers/construction verified locally, including modular Treasury, per-tile gold and explicit 50% Sell (2026-11-15).
 Updated: 2026-11-15
 
 ## How to use this plan
 
-- User's current stopping point: finish and verify A* diagonal movement and up to four miners per gold/gem seam (one per reachable cardinal side), then pause for discussion. Do not automatically begin room construction, progression, crowd avoidance or further systems.
+- User authorized modular Treasury construction, then removed separate claiming: any excavated floor is immediately buildable. Build never toggles existing room tiles off. Only explicit Sell mode removes built tiles, with the user's chosen 50% refund. This package is verified; report status and await the next direction. Do not automatically begin resident needs, recruitment, progression or crowd avoidance.
 - Read this file and `AGENTS.md` before starting work.
 - Work toward the current milestone. Keep the game playable as systems are added.
 - Use `[ ]` for pending work and `[x]` only for work verified against its acceptance criteria.
@@ -22,8 +22,8 @@ Updated: 2026-11-15
 - Begin with coherent retro 1990s-style low-poly graphics, small textures and simple animations. Upgrade presentation later.
 - Restrained mouse-and-keyboard HUD with readable information and shortcuts.
 - An animated keeper hand is the primary world cursor: it points out excavation targets and lets the player pick up and drop creatures to guide them. Give it an original design matching Grimblekeep's gritty cartoon style.
-- Default click/drag on stone, gold or gem blocks toggles excavation marks directly; there is no separate generic selection or Hand/Dig/Inspect mode. Open ground is eligible only for future actions such as room construction. Marks glow across block tops and exposed sides, with green plus/red X previews for additions/removals.
-- Core loop: excavate, claim land, mine gold, build rooms, attract creatures through portals, meet their needs and expand.
+- Default click/drag on stone, gold or gem blocks toggles excavation marks directly; there is no separate generic selection or Hand/Dig/Inspect mode. Open ground is eligible for the explicit room construction action. Marks glow across block tops and exposed sides, with green plus/red X previews for additions/removals.
+- Core loop: excavate, mine gold, build rooms on open floor, attract creatures through portals, meet their needs and expand. There is no separate claiming step.
 - The Dungeon Heart anchors the keeper's presence and forms the dungeon's central landmark. Begin with its chamber, a few worker imps and nearby mineable gold.
 - Keep the Heart separate from the portal: the Heart sustains the dungeon; the portal admits creatures. The Heart does not generate free gold or food.
 - Heart art direction: an exaggerated beating heart suspended in rusty chains above a stone basin, surrounded by candles and pipes. Use gritty cartoon materials and dark humor, such as an imp mopping up an unpleasant leak.
@@ -127,10 +127,10 @@ Required scenarios as their systems become available:
 | Room attraction | A species stays ineligible until its room/capacity rules are met; eligible arrivals use the connected portal and do not exceed capacity. |
 | Living residents | Observe repeated eating/sleeping cycles, competition for beds/food and recovery from target removal; needs and task displays agree with behavior. |
 | Keeper hand | Hover, mark/cancel, pick up and valid/invalid drop work across camera views; UI clicks do not trigger world actions. |
-| Save and resume | Save during active work and while a creature is held; loading preserves the Heart, ownership, resources and needs and restores sensible activity. |
+| Save and resume | Save during active work and while a creature is held; loading preserves the Heart, rooms, resources and needs and restores sensible activity. |
 | Extended operation | Seeded simulation and a graphical session show no accumulating errors, permanently stuck actors or unbounded growth; record population, map size and elapsed simulation time. |
 
-For gold, account explicitly for unmined, carried, dropped, stored and spent amounts against the initial total. For food, account for production and consumption. The Heart and portal create no free economic resources. Verify these properties across interruption and save/load scenarios.
+For gold, account explicitly for unmined, carried, dropped, stored and spent amounts against the initial total, gem output and explicit sale refunds. Starting rooms also have salvage value. For food, account for production and consumption. The Heart and portal create no free economic resources. Verify these properties across interruption and save/load scenarios.
 
 ### C. Asset loop: brief, create, import, inspect, revise
 
@@ -190,20 +190,23 @@ Gate: project launches without script errors; camera and selection work at diffe
 
 Evidence: `docs/VERIFICATION.md`; 28 scripts validated and 128 checks passed after default excavation/glow follow-up. GPU captures inspected at overview and close distances, plus mixed preview and top/side glow views. Native desktop automation failed to initialize; physical input feel still needs manual observation, while Godot Viewport input routing is tested.
 
-### 2. Workers and construction
+### 2. Workers and construction — verified locally
 
 - [x] M2A: marked stone becomes walkable floor, finite gold is mined into physical cargo/piles and deposited in a small starting treasury. No room-building interface is required for this package.
 - [x] Mark accessible rock for excavation; workers reach it and dig.
 - [x] Use the keeper hand to mark/cancel excavation targets, with distinct valid, selected and blocked feedback at different camera angles.
-- [ ] Claim excavated floor and update walkability.
+- [x] Excavated floor is immediately walkable and eligible for rooms; no separate claiming job or ownership requirement (user simplification).
 - [x] Mine finite gold seams and haul carried gold into treasury storage. Gold nodes hold 200; workers extract 20 per strike, carry up to 60 and deposit physically. Gem nodes yield gold more slowly and remain in place.
 - [x] Use eight-direction A* with weighted distance costs, strict no-corner-cutting, revision-aware navigation and mid-route edge revalidation. Workers move at equal world speed; mining remains cardinal-adjacent.
 - [x] Allow up to four miners per gold/gem node, one per reachable cardinal side, with shared yield accounting and individually releasable reservations. Stone and loose piles remain exclusive.
-- [ ] Build/remove room tiles with clear selection, validity and cost feedback.
-- [ ] Recognize connected rooms and handle merging/splitting and capacity changes.
+- [x] Build room tiles with clear drag preview, validity and exact cost. Existing tiles never toggle off; only explicit Sell mode removes them, with 50% refund shown before release.
+- [x] Recognize connected rooms and handle merging/splitting and capacity changes.
+- [x] Store gold per Treasury tile (500 each), balance worker deliveries, show pile/small/large chest stages and preserve local stock/refunds when selling or reducing capacity.
 - [x] Handle unreachable jobs, blocked routes and interrupted worker excavation/hauling without duplicate rewards; regression coverage includes cargo recovery when actors disappear and treasury access changes.
 
 Gate: a scripted scenario excavates a route, deposits gold and constructs a room; checks cover room changes, spending and job ownership.
+
+Evidence: 48 scripts validate and 870 automated checks pass, including 42 room rules/end-to-end mining/building, 33 finite-storage worker checks, 40 construction input checks and 97 independent room/refund checks. GPU room probe passes all 11 flags; lead and independent reviewers inspected the room, gold-stage, build and Sell captures. Native physical input remains unverified as recorded in `docs/VERIFICATION.md`.
 
 ### 3. Living pet dungeon
 
@@ -252,7 +255,7 @@ Gate: exported build supports the complete loop with cohesive presentation, reli
 - Avoid a monolithic controller, hard-coded node paths between unrelated systems and speculative framework machinery. Shared interfaces belong to the lead; changes require dependency review.
 - Review new definitions for duplicate IDs, invalid values and missing references. Prove extension boundaries with a small test module, not only architecture prose.
 - Code review must check module boundaries, readable names, small focused functions, deterministic testability, error handling and preservation of existing behavior. New mechanics may extend contracts deliberately when needed; do not promise that core will never evolve.
-- Maintain one clear source of truth for ownership, gold, needs, capacity and reservations.
+- Maintain one clear source of truth for room membership, gold, needs, capacity and reservations.
 - Tool eligibility belongs in authoritative selection/command rules. Preview symbols and counts must match the operation committed on release, including mixed toggles and modifier changes; do not rely on color alone for removal feedback.
 - Prefer simple systems with explicit responsibilities. Profile before introducing complex optimizations.
 - Use tests for consequential rules and failure cases; inspect rendered output for visual correctness. Headless success alone does not verify graphics or controls.
@@ -271,16 +274,24 @@ Gate: exported build supports the complete loop with cohesive presentation, reli
 - F4 independent review — accepted for M1: separate reviewer ran the suites, checked architecture/visuals and rechecked fixes to picking and script-validation failures; no code blockers remain. Native automation limitation is documented.
 - F5 tool split — superseded by the user's clarification: remove separate Hand/Dig modes and generic ground selection. Keep the add/remove preview work.
 - F6 default excavation and glow — accepted: authoritative marks on stone/gold/gem, mode UI removed, terrain-change cleanup, amber glow on tops and sides. Core 38, targeting 49, input 31, integration 10 pass (128 total). Lead and independent reviewer inspected mixed preview and top/side glow captures. Reviewer-noted stationary terrain-change preview gap fixed with regression checks. Worker execution remains Milestone 2.
-- No work package active. Stop implementation and discuss next steps.
+- M2D accepted: lead implemented core room state/registry, physical capacity and spending/refunds, scenario and docs; input agent implemented Build/Sell controls and 40 Viewport checks; worker agent implemented balanced finite hauling with 33 checks; presentation agent implemented generic rooms and per-tile gold stages, plus 97 independent rule checks. Independent reviews approved core, controls, worker behavior and rendered output. Full suite 870/0, scripts 48/0; GPU all 11 flags true. The user's removal of claiming and explicit Sell-only/50% decisions are implemented. Effort boundary respected: Treasury only; Lair/food are future roles.
+
+### Starter room direction (provisional)
+
+- Treasury: build now; costs stored gold and supplies finite storage capacity.
+- Each Treasury tile has its own gold stock and capacity. Workers spread deliveries across tiles with space. Configurable fullness thresholds display coin piles, small chests and large chests. Selling storage spills its contents as recoverable loose gold. The user chose a 50% construction-cost refund per tile, including starting room tiles; refund fills remaining storage or becomes loose gold if capacity is unavailable. Sale refunds are an explicit economy source in conservation checks.
+- Lair: next room role for resting and beds; detailed rules await discussion.
+- Hatchery / food room: next room role for physical food production; name and theme await lore discussion.
+- Later rooms should follow gameplay needs after the pet-dungeon loop works. These roles do not authorize implementing additional rooms in M2D.
 
 For each future package record: ID, objective, implementer, reviewer, owned files, dependencies, acceptance checks and status.
 
 ## Latest handoff
 
-- Completed: foundation and worker digging/mining/hauling, now with eight-direction A*, corner-safe dynamic routes and up to four miners sharing gold/gem nodes on reachable cardinal faces. Work-based leveling remains planned, not implemented.
-- Verification: `tools/dev.ps1 check` validates 40 scripts; `tools/dev.ps1 test` passes 658 checks. Independent review approved both updates. GPU captures verify four miners and diagonal worker movement; the worker scenario still deposits 400 gold and conserves supply. See `docs/VERIFICATION.md`.
-- Known limits: no room-building UI, ownership/claim system, creature needs/recruitment, XP/levels or saves. Starting treasury is scenario-defined with unlimited storage. Deposit transfer is instantaneous; its dedicated pose does not persist to a rendered frame. Physical input feel remains manually tested; export templates absent. This checkpoint is being committed for the requested status discussion; refer to Git history for its revision.
-- Next action: stop and discuss current state/next work with the user. Recommended topics: room construction/economy, lore checkpoint, then creature needs/recruitment and work progression. Do not start any of these automatically.
+- Completed: modular Treasury Build/Sell, no claiming step, four-connected room groups, physical per-tile storage and balanced hauling, gold pile/small/large chest stages, exact costs and 50% refunds with capacity-safe spill. Existing excavation, A* diagonals and four-sided mining remain verified. Work-based leveling remains planned, not implemented.
+- Verification: `tools/dev.ps1 check` validates 48 scripts; `tools/dev.ps1 test` passes 870 checks. Independent core/input/worker/visual reviews approved. GPU captures show three gold stages, Build/Sell previews, exact refund/spill and stage changes after spending; all 11 probe flags pass. See `docs/VERIFICATION.md`.
+- Known limits: no Lair/food mechanics, creature needs/recruitment, XP/levels or saves. Treasury cost 50/tile and capacity 500/tile are provisional balance values; chest thresholds are 35%/75%. Deposit transfer remains instantaneous. Native physical input automation remains unavailable; export templates absent. The user tried the restarted build and reported it looks good. This checkpoint is tracked in Git history.
+- Next action: commit/push as requested, then discuss the current stage, starter room roles and lore before implementing Lair, food and portal attraction. Do not begin these automatically.
 
 ## Later backlog
 

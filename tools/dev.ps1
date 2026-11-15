@@ -34,7 +34,7 @@ if ($Action -eq 'check') {
     Invoke-Engine @('--headless', '--path', $projectDir, '--script', 'res://tools/validate_scripts.gd')
 }
 if ($Action -eq 'test') {
-    foreach ($probe in @('path_economy_tests', 'pathfinding_tests', 'targeting_probe', 'selection_probe', 'integration_tests', 'worker_tests', 'mining_sides_tests')) {
+    foreach ($probe in @('path_economy_tests', 'pathfinding_tests', 'targeting_probe', 'selection_probe', 'integration_tests', 'worker_tests', 'mining_sides_tests', 'room_tests', 'treasury_worker_tests', 'room_input_tests', 'room_review_tests')) {
         Invoke-Engine @('--headless', '--path', $projectDir, '--script', "res://tests/$probe.gd")
     }
 }

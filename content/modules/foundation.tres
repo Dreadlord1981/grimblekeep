@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="ContentModule" load_steps=7 format=3]
+[gd_resource type="Resource" script_class="ContentModule" load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://core/content_module.gd" id="1"]
 [ext_resource type="Script" path="res://core/creature_definition.gd" id="2"]
@@ -14,15 +14,24 @@ scale_factor = 0.85
 move_speed = 2.8
 capabilities = Array[StringName]([&"excavate", &"haul"])
 
+[sub_resource type="Resource" id="Treasury"]
+script = ExtResource("3")
+id = &"foundation.treasury"
+display_name = "Treasury"
+gold_cost_per_tile = 50
+gold_storage_per_tile = 500
+floor_color = Color(0.30, 0.24, 0.14, 1)
+
 [sub_resource type="Resource" id="Lair"]
 script = ExtResource("3")
 id = &"foundation.lair"
 display_name = "Lair"
 gold_cost_per_tile = 50
+buildable = false
 floor_color = Color(0.22, 0.17, 0.21, 1)
 
 [resource]
 script = ExtResource("1")
 id = &"foundation"
-definitions = Array[Resource]([SubResource("Imp"), SubResource("Lair")])
+definitions = Array[Resource]([SubResource("Imp"), SubResource("Treasury"), SubResource("Lair")])
 feature_scripts = Array[Script]([ExtResource("4")])

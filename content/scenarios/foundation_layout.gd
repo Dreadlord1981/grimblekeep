@@ -20,3 +20,10 @@ static func _carve(grid: DungeonGrid, area: Rect2i) -> void:
 	for y in range(area.position.y, area.end.y):
 		for x in range(area.position.x, area.end.x):
 			grid.set_tile(Vector2i(x, y), DungeonGrid.Tile.FLOOR)
+
+
+static func setup_rooms(context: GameContext) -> void:
+	# All open floor is immediately buildable; no separate claiming step.
+	# The four-cell Treasury supplies the bootstrap mining/construction loop.
+	var treasury: Array[Vector2i] = [Vector2i(16, 18), Vector2i(17, 18), Vector2i(16, 19), Vector2i(17, 19)]
+	assert(context.rooms.place_initial(&"foundation.treasury", treasury), "Starting treasury must fit open floor")

@@ -3,6 +3,8 @@ extends Node3D
 ## Converts desktop input into camera movement and excavation marking.
 
 signal preview_changed(changes: Dictionary)
+signal construction_changed
+signal room_action_finished(result: Dictionary)
 
 const INVALID_CELL := Vector2i(-1, -1)
 const MIN_DISTANCE := 12.0
@@ -16,6 +18,8 @@ var yaw := 0.30
 var pitch := 0.90
 var distance := 31.0
 var ui_hit_test: Callable
+var build_room_id: StringName = &""
+var removing_rooms := false
 var _overlay: Node3D
 var _preview_changes: Dictionary = {"add": [], "remove": [], "blocked": []}
 var _drag_start := INVALID_CELL
@@ -40,6 +44,8 @@ func setup(game_context: GameContext) -> void:
 	recenter()
 	context.excavation_marks_changed.connect(_show_marks)
 	context.grid.tile_changed.connect(_on_terrain_changed)
+	context.rooms.changed.connect(_refresh_preview)
+	context.economy.changed.connect(_refresh_preview)
 	_show_marks(context.last_marked_cell)
 
 
@@ -88,8 +94,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			recenter()
 			get_viewport().set_input_as_handled()
 		elif event.keycode == KEY_ESCAPE:
-			_cancel_drag()
-			context.clear_excavation_marks()
+			if is_constructing():
+				exit_construction()
+			else:
+				_cancel_drag()
+				context.clear_excavation_marks()
 			get_viewport().set_input_as_handled()
 	var pointer: Vector2 = event.position if event is InputEventMouse else get_viewport().get_mouse_position()
 	if is_pointer_over_ui(pointer):
@@ -182,6 +191,51 @@ func get_preview_changes() -> Dictionary:
 	return _preview_changes.duplicate(true)
 
 
+func is_constructing() -> bool:
+	return build_room_id != &"" or removing_rooms
+
+
+func set_build_room(definition_id: StringName) -> void:
+	if context.registry == null:
+		return
+	var definition := context.registry.get_room(definition_id)
+	if definition == null or not definition.buildable:
+		return
+	build_room_id = definition_id
+	removing_rooms = false
+	_cancel_drag()
+	construction_changed.emit()
+
+
+func set_sell_rooms() -> void:
+	build_room_id = &""
+	removing_rooms = true
+	_cancel_drag()
+	construction_changed.emit()
+
+
+func set_remove_rooms() -> void:
+	# Compatibility for existing verification probes; the player chooses Sell.
+	set_sell_rooms()
+
+
+func exit_construction() -> void:
+	build_room_id = &""
+	removing_rooms = false
+	_cancel_drag()
+	construction_changed.emit()
+
+
+func _construction_cells(first: Vector2i, last: Vector2i) -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	if not context.grid.is_inside(first) or not context.grid.is_inside(last):
+		return cells
+	for y in range(mini(first.y, last.y), maxi(first.y, last.y) + 1):
+		for x in range(mini(first.x, last.x), maxi(first.x, last.x) + 1):
+			cells.append(Vector2i(x, y))
+	return cells
+
+
 func _update_pointer_preview(screen: Vector2) -> void:
 	var cell := INVALID_CELL if is_pointer_over_ui(screen) else get_target_cell(screen)
 	if cell == context.hovered_cell and (_drag_start == INVALID_CELL or _drag_end == cell):
@@ -193,6 +247,9 @@ func _update_pointer_preview(screen: Vector2) -> void:
 
 func _refresh_preview() -> void:
 	if context == null:
+		return
+	if is_constructing():
+		_refresh_construction_preview()
 		return
 	var candidates: Array[Vector2i] = []
 	var blocked: Array[Vector2i] = []
@@ -231,6 +288,30 @@ func _refresh_preview() -> void:
 		preview_changed.emit(get_preview_changes())
 
 
+func _refresh_construction_preview() -> void:
+	var cells: Array[Vector2i] = []
+	if _drag_start != INVALID_CELL:
+		cells = _construction_cells(_drag_start, _drag_end)
+	elif context.grid.is_inside(context.hovered_cell):
+		cells.append(context.hovered_cell)
+	var quote: Dictionary = context.rooms.quote_remove(cells) if removing_rooms else context.rooms.quote_build(build_room_id, cells)
+	var adding: Array[Vector2i] = []
+	var removing: Array[Vector2i] = []
+	var blocked: Array[Vector2i] = []
+	adding.assign(quote.get("add", []))
+	removing.assign(quote.get("remove", []))
+	blocked.assign(quote.get("blocked", []))
+	if not quote.get("valid", false):
+		blocked.append_array(adding)
+		blocked.append_array(removing)
+		adding.clear()
+		removing.clear()
+	_overlay.show_construction_preview(adding, removing, blocked)
+	if quote != _preview_changes:
+		_preview_changes = quote.duplicate(true)
+		preview_changed.emit(get_preview_changes())
+
+
 func _modifier_mode(event: InputEventWithModifiers) -> int:
 	if event.ctrl_pressed:
 		return GameContext.MarkOperation.REMOVE
@@ -253,6 +334,16 @@ func _begin_drag(event: InputEventMouseButton) -> void:
 
 func _finish_drag(screen: Vector2) -> void:
 	var last := get_target_cell(screen)
+	if is_constructing():
+		var result: Dictionary
+		var room_cells := _construction_cells(_drag_start, last)
+		if removing_rooms:
+			result = context.rooms.remove(room_cells)
+		else:
+			result = context.rooms.build(build_room_id, room_cells)
+		room_action_finished.emit(result)
+		_cancel_drag()
+		return
 	var cells := rectangle_cells(_drag_start, last)
 	if not cells.is_empty():
 		context.mark_excavation(cells, _drag_mode)

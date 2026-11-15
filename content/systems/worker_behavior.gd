@@ -99,8 +99,8 @@ func _job_is_valid(definition: CreatureDefinition) -> bool:
 	if job.kind == &"excavate":
 		return &"excavate" in definition.capabilities and _context.excavation_marks.has(job.target_cell) and _context.grid.get_tile(job.target_cell) == job.terrain_kind and _context.grid.can_excavate(job.target_cell)
 	if job.kind == &"haul":
-		return &"haul" in definition.capabilities and _context.economy.ground_gold.get(job.target_cell, 0) > 0
-	return &"haul" in definition.capabilities and actor.carried_gold > 0 and _context.economy.is_treasury(job.target_cell)
+		return &"haul" in definition.capabilities and _context.economy.ground_gold.get(job.target_cell, 0) > 0 and _board.has_reachable_treasury(job.target_cell)
+	return &"haul" in definition.capabilities and actor.carried_gold > 0 and _context.economy.available_storage(job.target_cell) > 0
 
 
 func _follow_path(delta: float, speed: float) -> bool:
@@ -176,8 +176,9 @@ func _pick_up_gold(definition: CreatureDefinition) -> void:
 
 func _deposit_gold() -> void:
 	actor.action = &"depositing"
-	if _context.economy.deposit(job.target_cell, actor.carried_gold):
-		actor.carried_gold = 0
+	var amount := mini(actor.carried_gold, _context.economy.available_storage(job.target_cell))
+	if _context.economy.deposit(job.target_cell, amount):
+		actor.carried_gold -= amount
 	cancel()
 
 

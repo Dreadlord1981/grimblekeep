@@ -7,6 +7,7 @@ var marked_frames: Dictionary[Vector2i, Node3D] = {}
 var _add_frames: Dictionary[Vector2i, Node3D] = {}
 var _remove_frames: Dictionary[Vector2i, Node3D] = {}
 var _neutral_frames: Dictionary[Vector2i, Node3D] = {}
+var _blocked_frames: Dictionary[Vector2i, Node3D] = {}
 var _glow_material: ShaderMaterial
 const GlowShader = preload("res://interaction/excavation_glow.gdshader")
 
@@ -16,9 +17,17 @@ func show_marks(cells: Array[Vector2i]) -> void:
 
 
 func show_preview(adding: Array[Vector2i], removing: Array[Vector2i], neutral: Array[Vector2i]) -> void:
+	_sync_frames(_blocked_frames, [], Color(0.97, 0.29, 0.23), 0.05, 2)
 	_sync_frames(_add_frames, adding, Color(0.45, 0.87, 0.55), 0.04, 1)
 	_sync_frames(_remove_frames, removing, Color(0.97, 0.29, 0.23), 0.05, 2)
 	_sync_frames(_neutral_frames, neutral, Color(0.53, 0.55, 0.54), 0.025)
+
+
+func show_construction_preview(adding: Array[Vector2i], removing: Array[Vector2i], blocked: Array[Vector2i]) -> void:
+	_sync_frames(_add_frames, adding, Color(0.45, 0.87, 0.55), 0.04, 1)
+	_sync_frames(_remove_frames, removing, Color(0.97, 0.29, 0.23), 0.05, 2)
+	_sync_frames(_neutral_frames, [], Color(0.53, 0.55, 0.54), 0.025)
+	_sync_frames(_blocked_frames, blocked, Color(0.97, 0.29, 0.23), 0.055, 2)
 
 
 func _make_frame(color: Color, thickness: float, marker: int = 0, glow_height: float = -1.0) -> Node3D:
