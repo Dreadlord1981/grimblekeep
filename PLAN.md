@@ -1,7 +1,7 @@
 # Grimblekeep — shared development checklist
 
 Status: planning only. Game implementation has not been authorized yet.
-Updated: 2026-11-12
+Updated: 2026-11-15
 
 ## How to use this plan
 
@@ -36,6 +36,30 @@ Updated: 2026-11-12
 One small sandbox dungeon containing a central Dungeon Heart chamber, worker imps, two resident creature species, one separate portal, a treasury, a lair and a food room. Workers excavate and haul gold. Residents arrive when room requirements are met, explore, eat and sleep. The player can inspect creatures, guide them with the keeper hand and save/load the dungeon. The Heart beats and establishes atmosphere; attack, destruction and defeat mechanics wait until the combat milestone.
 
 Combat, invading heroes, research, spells, traps, campaigns, multiplayer and elaborate manufacturing chains are outside this first scope.
+
+## World and lore checkpoint — after the playable foundation
+
+- [ ] Hold a world-building discussion with the user after Milestone 1, before finalizing creature identities, room themes and narrative content for Milestone 3.
+- [ ] Establish who the keeper is, what the Dungeon Heart means and why this dungeon exists.
+- [ ] Decide where portals lead, why creatures choose to arrive and what life underground is like.
+- [ ] Define the surface world and its view of dungeon inhabitants, including the motives of future invading heroes.
+- [ ] Establish the balance of menace, affection and twisted humor, with examples that guide names, dialogue, props and creature behavior.
+- [ ] Capture agreed canon in a short `LORE.md` when that discussion happens; separate accepted facts from open ideas.
+
+Until then, use provisional names and replaceable content. Foundation work can proceed once authorized; avoid inventing permanent lore or commissioning substantial narrative-dependent assets before this checkpoint. Lore should explain and enrich the agreed mechanics; any new gameplay scope needs a separate decision. Begin with a concise premise and world rules rather than a full campaign history.
+
+### Creature lore structure — use for each species at the lore checkpoint
+
+- [ ] Origins: what the creature is, how its kind came to exist, its homeland and natural habitat.
+- [ ] Culture: beliefs, customs, social habits, rivalries and relationships with other species and the surface world.
+- [ ] Motivation: why it leaves home, travels through a portal and chooses to live in the keeper's dungeon.
+- [ ] Needs and talents: preferred food, sleeping arrangements, room conditions, useful abilities and sources of discomfort or trouble.
+- [ ] Personality in play: how its background appears in its silhouette, movement, possessions, animations and everyday behavior; allow individual variation within a species.
+- [ ] Humor: characteristic contradictions, anxieties or customs that produce Grimblekeep's dark humor naturally.
+- [ ] Gameplay connections: identify which attraction rules, room preferences and existing behaviors express this background. Mark proposed mechanics as ideas until separately approved.
+- [ ] World consistency: check connections to the shared world, Heart, portals and other species; distinguish agreed canon from provisional ideas in `LORE.md`.
+
+Begin with worker imps and the two initial resident species. Make this small cast memorable before expanding it. Review each species for a clear origin, a believable reason to join the dungeon and observable personality. Lore descriptions do not mark unimplemented behavior complete or authorize additional simulation systems.
 
 ## Work and review flow
 
@@ -218,7 +242,7 @@ For each future package record: ID, objective, implementer, reviewer, owned file
 
 ## Latest handoff
 
-- Completed: shared plan and agent entry instructions; keeper hand and Dungeon Heart included in scope. Added required gameplay, asset, independent review and integration loops with evidence, acceptance and repair rules. Heart defense and destruction remain future combat work. Implementation remains pending authorization.
+- Completed: shared plan and agent entry instructions; keeper hand and Dungeon Heart included in scope. Added required gameplay, asset, independent review and integration loops with evidence, acceptance and repair rules. Added a collaborative world/lore checkpoint after Milestone 1, including a per-species structure for origins, culture, motivation, needs, talents, personality, humor and gameplay connections. Heart defense and destruction remain future combat work. Implementation remains pending authorization.
 - Verification: documentation checked against the agreed conversation scope; no game tests apply yet.
 - Known limits: toolchain/export/graphical testing has not been verified from this directory; generated concepts are visual references, not usable 3D game assets.
 - Next action: after implementation authorization, verify tooling and establish the first foundation work packages.
